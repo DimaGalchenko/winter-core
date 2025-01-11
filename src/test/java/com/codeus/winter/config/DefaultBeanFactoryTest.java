@@ -1,26 +1,11 @@
 package com.codeus.winter.config;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import com.codeus.winter.config.impl.BeanDefinitionImpl;
+import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
 import com.codeus.winter.exception.BeanNotFoundException;
 import com.codeus.winter.exception.NotUniqueBeanDefinitionException;
-import com.codeus.winter.test.BeanA;
-import com.codeus.winter.test.BeanB;
-import com.codeus.winter.test.BeanC;
-import com.codeus.winter.test.BeanD;
-import com.codeus.winter.test.BeanE;
-import com.codeus.winter.test.Common;
+import com.codeus.winter.test.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,6 +16,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class DefaultBeanFactoryTest {
     private final BeanDefinition beanDefinitionA = mock(BeanDefinition.class);
@@ -68,8 +64,8 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
-    @DisplayName("Should initialize one bean without dependency")
-    void testInitializeSingleBeanAWithoutDependency() {
+    @DisplayName("Should initialize one bean without dependency using default constructor")
+    void testInitializeBeanWithoutDependencyUsingDefaultConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory(
                 Map.of("BeanA", beanDefinitionA)
         );
@@ -83,10 +79,11 @@ class DefaultBeanFactoryTest {
     @DisplayName("Should initialize two bean with dependencies in order:" +
             "second bean definition depends on first bean definition")
     void testInitializeBeansWithDependencyInOrder() {
-        DefaultBeanFactory factory = new DefaultBeanFactory(
-                Map.of("BeanA", beanDefinitionA,
-                        "BeanB", beanDefinitionB)
-        );
+        Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
+        beanDefinitionMap.put("BeanA", beanDefinitionA);
+        beanDefinitionMap.put("BeanB", beanDefinitionB);
+
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
         factory.initializeBeans();
 
         BeanA beanA = factory.getBean(BeanA.class);
@@ -135,12 +132,124 @@ class DefaultBeanFactoryTest {
         assertEquals(beanA, beanB.getBeanA());
         BeanC beanC = factory.getBean(BeanC.class);
         assertNotNull(beanC);
-        assertNotNull(beanB.getBeanA());
         assertNotNull(beanC.getBeanA());
         assertNotNull(beanC.getBeanB());
-        assertEquals(beanA, beanB.getBeanA());
         assertEquals(beanA, beanC.getBeanA());
         assertEquals(beanB, beanC.getBeanB());
+    }
+
+    @Test
+    @DisplayName("Should initialize bean with dependencies using single declared non-annotated constructor")
+    void testInitializeBeanWithDependenciesUsingDeclaredNotAnnotatedConstructor() {
+        Map<String, BeanDefinition> beanDefinitionMap = new HashMap<>();
+        beanDefinitionMap.put("BeanB", beanDefinitionB);
+        beanDefinitionMap.put("BeanA", beanDefinitionA);
+
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
+        factory.initializeBeans();
+        BeanA beanA = factory.getBean(BeanA.class);
+        BeanB beanB = factory.getBean(BeanB.class);
+
+        assertNotNull(beanA);
+        assertNotNull(beanB);
+        assertNotNull(beanB.getBeanA());
+        assertEquals(beanA, beanB.getBeanA());
+    }
+
+    @Test
+    @DisplayName("Should initialize bean with dependencies using declared annotated constructor")
+    void testInitializeBeanWithDependenciesUsingDeclaredAnnotatedConstructor() {
+        BeanDefinition beanDefinition = mock(BeanDefinition.class);
+        when(beanDefinition.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanWithAnnotatedConstructor");
+        when(beanDefinition.isSingleton()).thenReturn(true);
+
+        Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
+        beanDefinitionMap.put("BeanWithAnnotatedConstructor", beanDefinition);
+        beanDefinitionMap.put("BeanA", beanDefinitionA);
+
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
+        factory.initializeBeans();
+        BeanA beanA = factory.getBean(BeanA.class);
+        BeanWithAnnotatedConstructor beanWrapper = factory.getBean(BeanWithAnnotatedConstructor.class);
+
+        assertNotNull(beanA);
+        assertNotNull(beanWrapper);
+        assertNotNull(beanWrapper.getBeanA());
+        assertEquals(beanA, beanWrapper.getBeanA());
+    }
+
+    @Test
+    @DisplayName("Should autowire Bean dependency by interface type")
+    void testInitializeBeansDependenciesByInterface() {
+        BeanDefinition beanDefinitionA = mock(BeanDefinition.class);
+        when(beanDefinitionA.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanImpl");
+        when(beanDefinitionA.isSingleton()).thenReturn(true);
+
+        BeanDefinition beanDefinitionB = mock(BeanDefinition.class);
+        when(beanDefinitionB.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanWithDependencyByInterface");
+        when(beanDefinitionB.isSingleton()).thenReturn(true);
+        when(beanDefinitionB.getDependsOn()).thenReturn(new String[]{"BeanImpl"});
+
+        Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
+        beanDefinitionMap.put("BeanWithDependencyByInterface", beanDefinitionB);
+        beanDefinitionMap.put("BeanImpl", beanDefinitionA);
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
+
+        factory.initializeBeans();
+        BeanImpl bean = factory.getBean(BeanImpl.class);
+        BeanWithDependencyByInterface beanWrapper = factory.getBean(BeanWithDependencyByInterface.class);
+
+        assertNotNull(bean);
+        assertNotNull(beanWrapper);
+        assertNotNull(beanWrapper.getWrappeeBean());
+        assertEquals(bean, beanWrapper.getWrappeeBean());
+    }
+
+    @Test
+    @DisplayName("Should fail initializing beans with cyclic dependencies")
+    void testInitializeBeansWithCyclicDependencies() {
+        BeanDefinition beanDefinitionA = mock(BeanDefinition.class);
+        when(beanDefinitionA.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanWithCyclicDependencyA");
+        when(beanDefinitionA.isSingleton()).thenReturn(true);
+
+        BeanDefinition beanDefinitionB = mock(BeanDefinition.class);
+        when(beanDefinitionB.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanWithCyclicDependencyB");
+        when(beanDefinitionB.isSingleton()).thenReturn(true);
+
+        Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
+        beanDefinitionMap.put("BeanA", this.beanDefinitionA);
+        beanDefinitionMap.put("BeanWithCyclicDependencyA", beanDefinitionA);
+        beanDefinitionMap.put("BeanWithCyclicDependencyB", beanDefinitionB);
+
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
+
+        assertThrows(BeanCurrentlyInCreationException.class, factory::initializeBeans);
+    }
+
+    @Test
+    @DisplayName("Should fail initializing bean with self injection")
+    void testFailOnSelfInjection() {
+        BeanDefinition beanDefinition = mock(BeanDefinition.class);
+        when(beanDefinition.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanWithSelfInjection");
+        when(beanDefinition.isSingleton()).thenReturn(true);
+
+        Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
+        beanDefinitionMap.put("BeanWithSelfInjection", beanDefinition);
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
+
+        assertThrows(BeanCurrentlyInCreationException.class, factory::initializeBeans);
+    }
+
+    @Test
+    //Test for com.codeus.winter.config.DefaultBeanFactory.resolveDependency -> last `else-clause` throws `NotUniqueBeanDefinitionException`
+    void testFailInitializeBeanWithDependencyIfMultipleCandidatesAvailable() {
+
+    }
+
+    @Test
+    //Test for com.codeus.winter.config.DefaultBeanFactory.resolveDependency -> `if-clause` candidates.isEmpty() throws `BeanFactoryException`
+    void testFailInitializeBeanWithDependencyIfNoCandidatesAvailable() {
+
     }
 
     @Test
@@ -148,15 +257,14 @@ class DefaultBeanFactoryTest {
     void testThrowExceptionWhenBeanDefinitionsDoesNotContainDependencyBean() {
         Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
         beanDefinitionMap.put("BeanB", beanDefinitionB);
-        beanDefinitionMap.put("BeanA", beanDefinitionA);
-        when(beanDefinitionB.getDependsOn()).thenReturn(new String[]{"BeanA", "BeanC"});
         DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
 
         BeanFactoryException beanFactoryException = assertThrows(BeanFactoryException.class, factory::initializeBeans);
 
-        assertEquals("Dependency not found for bean: BeanC", beanFactoryException.getMessage());
+        assertEquals("Cannot find bean definition for class='com.codeus.winter.test.BeanA'", beanFactoryException.getMessage());
     }
 
+    //TODO: review if needed
     @Test
     @DisplayName("Should throw exception when factory can't resolve dependency")
     void testThrowExceptionWhenBeanFactoryCantResolvePendingDependencies() {
@@ -326,9 +434,7 @@ class DefaultBeanFactoryTest {
     @Test
     @DisplayName("Should apply bean post processors before initialization")
     void testApplyBeanPostProcessorsBeforeInitialization() {
-        DefaultBeanFactory beanFactory = new DefaultBeanFactory(Map.of(
-                "BeanA", beanDefinitionA
-        ));
+        DefaultBeanFactory beanFactory = new DefaultBeanFactory(Map.of("BeanA", beanDefinitionA));
         BeanPostProcessor beanPostProcessor = spy(BeanPostProcessor.class);
         BeanA beanAfterPostProcessing = new BeanA();
         when(beanPostProcessor.postProcessBeforeInitialization(any(), anyString())).thenReturn(beanAfterPostProcessing);
