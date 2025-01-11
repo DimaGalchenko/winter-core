@@ -3,7 +3,7 @@ package com.codeus.winter.exception;
 import jakarta.annotation.Nullable;
 
 /**
- * Exception for not uniq BeanDefinition.
+ * Exception for not unique BeanDefinition.
  */
 public class NotUniqueBeanDefinitionException extends RuntimeException {
     /**

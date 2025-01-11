@@ -1,8 +1,9 @@
 package com.codeus.winter.test;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class BeanC {
-    private BeanA beanA;
-    private BeanB beanB;
+    private final BeanA beanA;
+    private final BeanB beanB;
 
     public BeanC(BeanA beanA, BeanB beanB) {
         this.beanA = beanA;
