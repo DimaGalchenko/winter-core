@@ -11,10 +11,8 @@ import java.lang.reflect.Constructor;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 //TODO: add nested classes for each method tests
 class ConstructorResolverTest {
@@ -31,8 +29,8 @@ class ConstructorResolverTest {
         beanBMock = mock(BeanB.class);
         beanFactoryMock = mock(AutowireCapableBeanFactory.class);
 
-        when(beanFactoryMock.resolveDependency(anyString(), eq(BeanA.class))).thenReturn(beanAMock);
-        when(beanFactoryMock.resolveDependency(anyString(), eq(BeanB.class))).thenReturn(beanBMock);
+        doReturn(beanAMock).when(beanFactoryMock).resolveDependency(argThat(desc -> desc.getDependencyClass() == BeanA.class));
+        doReturn(beanBMock).when(beanFactoryMock).resolveDependency(argThat(desc -> desc.getDependencyClass() == BeanB.class));
     }
 
     @Test

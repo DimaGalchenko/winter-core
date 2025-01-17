@@ -31,6 +31,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
 
     public DefaultBeanFactory() {
         this.beanDefinitions = new HashMap<>();
+        this.constructorResolver = new ConstructorResolver(this);
     }
 
     public DefaultBeanFactory(Map<String, BeanDefinition> beanDefinitions) {
@@ -247,55 +248,6 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         return beanInstance;
     }
 
-    @Override
-    protected Object resolveDependency(String dependencyBeanName, Class<?> dependencyClass) {
-        List<Map.Entry<String, BeanDefinition>> candidates = new ArrayList<>();
-        //TODO: consider moving this `for-clause` into a separate method, or even somehow re-use `DefaultBeanFactory.getBean(java.lang.String, java.lang.Class<T>)`
-        for (Map.Entry<String, BeanDefinition> definitionEntry : beanDefinitions.entrySet()) {
-            BeanDefinition candidateDefinition = definitionEntry.getValue();
-
-            try {
-                Class<?> candidateClass = Class.forName(candidateDefinition.getBeanClassName());
-
-                if (dependencyClass.isAssignableFrom(candidateClass)) {
-                    candidates.add(definitionEntry);
-                }
-            } catch (ClassNotFoundException e) {
-                throw new BeanFactoryException("Class with name not found: " + candidateDefinition.getBeanClassName(), e);
-            }
-        }
-
-        if (candidates.isEmpty())
-            throw new BeanFactoryException("Cannot find bean definition for class='%s'".formatted(dependencyClass.getName()));
-
-        Map.Entry<String, BeanDefinition> targetCandidate;
-        if (candidates.size() == 1) {
-            targetCandidate = candidates.getFirst();
-        } else {
-            //TODO #35, #46: there are multiple candidates, add logic to choose one based on @Primary, @Qualifier or other util annotation.
-            String candidateClasses = candidates.stream().map(candidate -> candidate.getValue().getBeanClassName()).collect(Collectors.joining(", "));
-            throw new NotUniqueBeanDefinitionException("Cannot bean for class=%s, multiple beans are available for it: %s".formatted(dependencyClass, candidateClasses));
-        }
-
-        return getOrCreateBean(targetCandidate.getKey(), targetCandidate.getValue());
-    }
-
-
-    private Object instantiateBean(String beanName, BeanDefinition beanDefinition) {
-        String className = retrieveBeanClassName(beanName, beanDefinition);
-
-        try {
-            Class<?> beanClass = Class.forName(className);
-            return beanClass.getConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new BeanFactoryException("Class with name not found: " + className, e);
-        } catch (NoSuchMethodException e) {
-            throw new BeanFactoryException("Class has no public default constructor: " + className, e);
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
-            throw new BeanFactoryException("Unable to create bean instance due to: " + e.getMessage(), e);
-        }
-    }
-
     /**
      * ...
      * Searches only public constructors for Autowiring.
@@ -318,6 +270,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         List<Constructor<?>> candidates = new ArrayList<>();
         Constructor<?> explicitAutowiringConstructor = null;
         for (Constructor<?> constructor : constructors) {
+            //TODO: add logic to handle a class with two constructors and one of the is default (no arguments)
             if (hasAutowiredAnnotation(constructor)) {
                 explicitAutowiringConstructor = constructor;
             }
@@ -336,37 +289,94 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         }
     }
 
-    private Object getBeanDependency(Type dependencyType) {
+    private Object instantiateBean(String beanName, BeanDefinition beanDefinition) {
+        String className = retrieveBeanClassName(beanName, beanDefinition);
+
+        try {
+            Class<?> beanClass = Class.forName(className);
+            return beanClass.getConstructor().newInstance();
+        } catch (ClassNotFoundException e) {
+            throw new BeanFactoryException("Class with name not found: " + className, e);
+        } catch (NoSuchMethodException e) {
+            throw new BeanFactoryException("Class has no public default constructor: " + className, e);
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            throw new BeanFactoryException("Unable to create bean instance due to: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    protected Object resolveDependency(DependencyDescriptor descriptor) {
         Object dependency;
-        Type rawType = getRawType(dependencyType);
-        if (rawType.equals(List.class)) {
+        Class<?> dependencyClass = descriptor.getDependencyClass();
+        Type dependencyType = descriptor.getDependencyType();
+
+        if (dependencyClass.equals(List.class)) {
             dependency = getCollectionDependency(dependencyType, 0).toList();
-        } else if (rawType.equals(Set.class)) {
+        } else if (dependencyClass.equals(Set.class)) {
             dependency = getCollectionDependency(dependencyType, 0).collect(Collectors.toSet());
-        } else if (rawType.equals(Map.class)) {
+        } else if (dependencyClass.equals(Map.class)) {
             dependency = getCollectionDependency(dependencyType, 1)
                 .collect(Collectors.toMap(bean -> bean.getClass().getName(), bean -> bean));
         } else {
-            dependency = singletonBeans.values().stream()
-                .filter(bean -> bean.getClass().equals(rawType))
-                .findFirst()
-                .orElse(null);
+            dependency = resolveSingleDependency(descriptor);
         }
         return dependency;
     }
 
-    private Type getRawType(Type dependencyType) {
-        return dependencyType instanceof ParameterizedType
-            ? ((ParameterizedType) dependencyType).getRawType()
-            : dependencyType;
+    private Stream<Object> getCollectionDependency(Type parameterType, int valueTypeIndex) {
+        Type dependencyType = ((ParameterizedType) parameterType).getActualTypeArguments()[valueTypeIndex];
+        DependencyDescriptor descriptor = new DependencyDescriptor(dependencyType);
+        return resolveMultipleDependencies(descriptor).stream();
     }
 
-    private Stream<Object> getCollectionDependency(Type parameterType, int valueTypeIndex) {
-        Class<?> dependencyClass =
-            (Class<?>) ((ParameterizedType) parameterType).getActualTypeArguments()[valueTypeIndex];
-        return singletonBeans.values().stream()
-            .filter(bean -> Arrays.stream(bean.getClass().getInterfaces())
-                .anyMatch(interfaceClass -> interfaceClass.isAssignableFrom(dependencyClass)));
+    protected List<Object> resolveMultipleDependencies(DependencyDescriptor descriptor) {
+        Class<?> dependencyClass = descriptor.getDependencyClass();
+        List<Object> dependencies = new ArrayList<>();
+
+        for (Map.Entry<String, BeanDefinition> candidate : findCandidates(dependencyClass)) {
+            String beanName = candidate.getKey();
+            BeanDefinition beanDefinition = candidate.getValue();
+
+            dependencies.add(getOrCreateBean(beanName, beanDefinition));
+        }
+
+        return dependencies;
+    }
+
+    protected Object resolveSingleDependency(DependencyDescriptor descriptor) {
+        Class<?> dependencyClass = descriptor.getDependencyClass();
+        List<Map.Entry<String, BeanDefinition>> candidates = findCandidates(dependencyClass);
+
+        if (candidates.isEmpty())
+            throw new BeanFactoryException("Cannot find bean definition for class='%s'".formatted(dependencyClass.getName()));
+
+        Map.Entry<String, BeanDefinition> targetCandidate;
+        if (candidates.size() == 1) {
+            targetCandidate = candidates.getFirst();
+        } else {
+            //TODO #35, #46: there are multiple candidates, add logic to choose one based on @Primary, @Qualifier or other util annotation.
+            String candidateClasses = candidates.stream().map(candidate -> candidate.getValue().getBeanClassName()).collect(Collectors.joining(", "));
+            throw new NotUniqueBeanDefinitionException("Cannot bean for class=%s, multiple beans are available for it: %s".formatted(dependencyClass, candidateClasses));
+        }
+
+        return getOrCreateBean(targetCandidate.getKey(), targetCandidate.getValue());
+    }
+
+    //TODO: adjust return type
+    protected List<Map.Entry<String, BeanDefinition>> findCandidates(Class<?> targetClass) {
+        List<Map.Entry<String, BeanDefinition>> candidates = new ArrayList<>();
+        for (Map.Entry<String, BeanDefinition> definitionEntry : beanDefinitions.entrySet()) {
+            BeanDefinition candidateDefinition = definitionEntry.getValue();
+
+            try {
+                Class<?> candidateClass = Class.forName(candidateDefinition.getBeanClassName());
+                if (targetClass.isAssignableFrom(candidateClass)) candidates.add(definitionEntry);
+            } catch (ClassNotFoundException e) {
+                throw new BeanFactoryException("Class with name not found: " + candidateDefinition.getBeanClassName(), e);
+            }
+        }
+
+        return candidates;
     }
 
     private Object applyPostProcessorsBeforeInitialization(Object bean, String beanName) {

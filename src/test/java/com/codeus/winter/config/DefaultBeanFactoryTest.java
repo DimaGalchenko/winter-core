@@ -264,21 +264,21 @@ class DefaultBeanFactoryTest {
         assertEquals("Cannot find bean definition for class='com.codeus.winter.test.BeanA'", beanFactoryException.getMessage());
     }
 
-    //TODO: review if needed
-    @Test
-    @DisplayName("Should throw exception when factory can't resolve dependency")
-    void testThrowExceptionWhenBeanFactoryCantResolvePendingDependencies() {
-        Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
-        beanDefinitionMap.put("BeanOne", cycleBeanDefinitionOne);
-        beanDefinitionMap.put("BeanTwo", cycleBeanDefinitionTwo);
-        when(cycleBeanDefinitionOne.getDependsOn()).thenReturn(new String[]{"BeanTwo"});
-        when(cycleBeanDefinitionTwo.getDependsOn()).thenReturn(new String[]{"BeanOne"});
-        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
-
-        BeanFactoryException beanFactoryException = assertThrows(BeanFactoryException.class, factory::initializeBeans);
-
-        assertEquals("Unresolved dependencies for beans: [BeanOne, BeanTwo]", beanFactoryException.getMessage());
-    }
+//    //TODO: merge with testInitializeBeansWithCyclicDependencies
+//    @Test
+//    @DisplayName("Should throw exception when factory can't resolve dependency")
+//    void testThrowExceptionWhenBeanFactoryCantResolvePendingDependencies() {
+//        Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
+//        beanDefinitionMap.put("BeanOne", cycleBeanDefinitionOne);
+//        beanDefinitionMap.put("BeanTwo", cycleBeanDefinitionTwo);
+//        when(cycleBeanDefinitionOne.getDependsOn()).thenReturn(new String[]{"BeanTwo"});
+//        when(cycleBeanDefinitionTwo.getDependsOn()).thenReturn(new String[]{"BeanOne"});
+//        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
+//
+//        BeanFactoryException beanFactoryException = assertThrows(BeanFactoryException.class, factory::initializeBeans);
+//
+//        assertEquals("Unresolved dependencies for beans: [BeanOne, BeanTwo]", beanFactoryException.getMessage());
+//    }
 
     @Test
     @DisplayName("Should throw exception when bean definition does not contain class name")
