@@ -304,6 +304,12 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         }
     }
 
+    /**
+     * Resolves Bean instance using given {@link DependencyDescriptor}.
+     *
+     * @param descriptor a dependency descriptor for resolving a bean.
+     * @return bean instance that conform the given {@link DependencyDescriptor}.
+     */
     @Override
     protected Object resolveDependency(DependencyDescriptor descriptor) {
         Object dependency;
@@ -316,7 +322,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
             dependency = getCollectionDependency(dependencyType, 0).collect(Collectors.toSet());
         } else if (dependencyClass.equals(Map.class)) {
             dependency = getCollectionDependency(dependencyType, 1)
-                .collect(Collectors.toMap(bean -> bean.getClass().getName(), bean -> bean));
+                    .collect(Collectors.toMap(bean -> bean.getClass().getName(), bean -> bean));
         } else {
             dependency = resolveSingleDependency(descriptor);
         }
@@ -345,24 +351,16 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
 
     protected Object resolveSingleDependency(DependencyDescriptor descriptor) {
         Class<?> dependencyClass = descriptor.getDependencyClass();
-        List<Map.Entry<String, BeanDefinition>> candidates = findCandidates(dependencyClass);
-
-        if (candidates.isEmpty())
-            throw new BeanFactoryException("Cannot find bean definition for class='%s'".formatted(dependencyClass.getName()));
-
-        Map.Entry<String, BeanDefinition> targetCandidate;
-        if (candidates.size() == 1) {
-            targetCandidate = candidates.getFirst();
-        } else {
-            //TODO #35, #46: there are multiple candidates, add logic to choose one based on @Primary, @Qualifier or other util annotation.
-            String candidateClasses = candidates.stream().map(candidate -> candidate.getValue().getBeanClassName()).collect(Collectors.joining(", "));
-            throw new NotUniqueBeanDefinitionException("Cannot bean for class=%s, multiple beans are available for it: %s".formatted(dependencyClass, candidateClasses));
-        }
-
-        return getOrCreateBean(targetCandidate.getKey(), targetCandidate.getValue());
+        return resolveBean(dependencyClass);
     }
 
-    //TODO: adjust return type
+    /**
+     * Find all available in the bean definitions.
+     *
+     * @param targetClass a class to find bean candidates for.
+     * @return a list of bean candidates' names and definitions that are assignable from the given target class.
+     * @throws BeanFactoryException if a candidate class from bean definitions doesn't exist.
+     */
     protected List<Map.Entry<String, BeanDefinition>> findCandidates(Class<?> targetClass) {
         List<Map.Entry<String, BeanDefinition>> candidates = new ArrayList<>();
         for (Map.Entry<String, BeanDefinition> definitionEntry : beanDefinitions.entrySet()) {
@@ -377,6 +375,33 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         }
 
         return candidates;
+    }
+
+    /**
+     * Resolves bean instance for given class.
+     *
+     * @param beanClass a bean class to resolve for.
+     * @return bean instance that is assignable from the given class.
+     * @throws BeanFactoryException             if no BeanDefinition available for the given class.
+     * @throws NotUniqueBeanDefinitionException if multiple candidates available for the given class,
+     *                                          and it is not possible to determine the required one (missing qualifier metadata)
+     */
+    protected Object resolveBean(Class<?> beanClass) {
+        List<Map.Entry<String, BeanDefinition>> candidates = findCandidates(beanClass);
+
+        if (candidates.isEmpty())
+            throw new BeanFactoryException("Cannot find bean definition for class='%s'".formatted(beanClass.getName()));
+
+        Map.Entry<String, BeanDefinition> targetCandidate;
+        if (candidates.size() == 1) {
+            targetCandidate = candidates.getFirst();
+        } else {
+            //TODO #35, #46: there are multiple candidates, add logic to choose one based on @Primary, @Qualifier or other util annotation.
+            String candidateClasses = candidates.stream().map(candidate -> candidate.getValue().getBeanClassName()).collect(Collectors.joining(", "));
+            throw new NotUniqueBeanDefinitionException("Cannot bean for class=%s, multiple beans are available for it: %s".formatted(beanClass, candidateClasses));
+        }
+
+        return getOrCreateBean(targetCandidate.getKey(), targetCandidate.getValue());
     }
 
     private Object applyPostProcessorsBeforeInitialization(Object bean, String beanName) {
