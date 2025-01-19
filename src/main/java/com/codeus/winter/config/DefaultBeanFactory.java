@@ -86,6 +86,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
             throw new BeanNotFoundException(String.format("Bean with a name %s not found", name));
         }
 
+        //TODO: after shelving, keep this check, because retrieved bean could have non-compatible class with `requiredType`
         if (!requiredType.isAssignableFrom(bean.getClass())) {
             throw new BeanNotFoundException(String.format("Bean with a name %s is not compatible with the type %s",
                     name, requiredType.getName()));
@@ -263,7 +264,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         try {
             beanClass = Class.forName(className);
         } catch (ClassNotFoundException e) {
-            throw new BeanFactoryException("Class with name not found: " + beanName, e);
+            throw new BeanFactoryException("Class not found by name='%s' for bean='%s': ".formatted(className, beanName), e);
         }
 
         Constructor<?>[] constructors = beanClass.getConstructors();
@@ -296,7 +297,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
             Class<?> beanClass = Class.forName(className);
             return beanClass.getConstructor().newInstance();
         } catch (ClassNotFoundException e) {
-            throw new BeanFactoryException("Class with name not found: " + className, e);
+            throw new BeanFactoryException("Class not found by name='%s' for bean='%s': ".formatted(className, beanName), e);
         } catch (NoSuchMethodException e) {
             throw new BeanFactoryException("Class has no public default constructor: " + className, e);
         } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
@@ -355,7 +356,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     }
 
     /**
-     * Find all available in the bean definitions.
+     * Find all available bean candidates' names and definitions in the bean definitions that conform given target class.
      *
      * @param targetClass a class to find bean candidates for.
      * @return a list of bean candidates' names and definitions that are assignable from the given target class.
@@ -370,7 +371,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
                 Class<?> candidateClass = Class.forName(candidateDefinition.getBeanClassName());
                 if (targetClass.isAssignableFrom(candidateClass)) candidates.add(definitionEntry);
             } catch (ClassNotFoundException e) {
-                throw new BeanFactoryException("Class with name not found: " + candidateDefinition.getBeanClassName(), e);
+                throw new BeanFactoryException("Class not found by name='%s' for bean='%s': ".formatted(candidateDefinition.getBeanClassName(), definitionEntry.getKey()), e);
             }
         }
 
@@ -390,15 +391,18 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         List<Map.Entry<String, BeanDefinition>> candidates = findCandidates(beanClass);
 
         if (candidates.isEmpty())
-            throw new BeanFactoryException("Cannot find bean definition for class='%s'".formatted(beanClass.getName()));
+            throw new BeanFactoryException("Cannot resolve bean for type='%s', no bean definitions available".formatted(beanClass.getName()));
 
         Map.Entry<String, BeanDefinition> targetCandidate;
         if (candidates.size() == 1) {
             targetCandidate = candidates.getFirst();
         } else {
             //TODO #35, #46: there are multiple candidates, add logic to choose one based on @Primary, @Qualifier or other util annotation.
-            String candidateClasses = candidates.stream().map(candidate -> candidate.getValue().getBeanClassName()).collect(Collectors.joining(", "));
-            throw new NotUniqueBeanDefinitionException("Cannot bean for class=%s, multiple beans are available for it: %s".formatted(beanClass, candidateClasses));
+            String candidateClasses = candidates.stream()
+                    .map(candidate -> candidate.getValue().getBeanClassName())
+                    .sorted(Comparator.nullsLast(Comparator.naturalOrder()))
+                    .collect(Collectors.joining(", "));
+            throw new NotUniqueBeanDefinitionException("Cannot resolve bean for type='%s', multiple beans are available: %s".formatted(beanClass.getName(), candidateClasses));
         }
 
         return getOrCreateBean(targetCandidate.getKey(), targetCandidate.getValue());

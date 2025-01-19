@@ -2,13 +2,13 @@ package com.codeus.winter.test;
 
 public class BeanWithDependencyByInterface {
 
-    private final BeanInterface bean;
+    private final Common commonBean;
 
-    public BeanWithDependencyByInterface(BeanInterface bean) {
-        this.bean = bean;
+    public BeanWithDependencyByInterface(Common commonBean) {
+        this.commonBean = commonBean;
     }
 
-    public BeanInterface getWrappeeBean() {
-        return bean;
+    public Common getWrappeeBean() {
+        return commonBean;
     }
 }
