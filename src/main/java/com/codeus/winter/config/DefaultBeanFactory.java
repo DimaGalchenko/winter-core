@@ -236,7 +236,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      */
     private Object createBean(String beanName, BeanDefinition beanDefinition) {
         Object beanInstance;
-        Constructor<?> autowiringConstructor = resolveAutowiringConstructor(beanName, beanDefinition);
+        Constructor<?> autowiringConstructor = findAutowiringConstructor(beanName, beanDefinition);
 
         if (autowiringConstructor != null)
             beanInstance = constructorResolver.autowireConstructor(autowiringConstructor);
@@ -250,28 +250,25 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     }
 
     /**
-     * ...
-     * Searches only public constructors for Autowiring.
+     * Searches for a public constructor for a given bean's name and definition that can be used for autowiring the bean.
+     * The found constructor is never a default constructor or constructor without arguments.
      *
-     * @param beanName
-     * @param beanDefinition
-     * @return
+     * @param beanName a name of a bean to resolve autowiring constructor for.
+     * @param beanDefinition a definition of a bean to resolve autowiring constructor for.
+     * @return a public constructor ready for autowiring, null - otherwise.
+     * @throws RuntimeException if Bean class has two or more constructors marked with the {@link Autowired) annotation.
      */
-    private Constructor<?> resolveAutowiringConstructor(String beanName,
-                                                        BeanDefinition beanDefinition) {
+    private Constructor<?> findAutowiringConstructor(String beanName,
+                                                     BeanDefinition beanDefinition) {
         String className = retrieveBeanClassName(beanName, beanDefinition);
-        Class<?> beanClass;
-        try {
-            beanClass = Class.forName(className);
-        } catch (ClassNotFoundException e) {
-            throw new BeanFactoryException("Class not found by name='%s' for bean='%s': ".formatted(className, beanName), e);
-        }
+        Class<?> beanClass = resolveClass(className, beanName);
 
         Constructor<?>[] constructors = beanClass.getConstructors();
         List<Constructor<?>> candidates = new ArrayList<>();
         Constructor<?> explicitAutowiringConstructor = null;
         for (Constructor<?> constructor : constructors) {
             //TODO: add logic to handle a class with two constructors and one of the is default (no arguments)
+            //TODO: add logic to handle multiple constructors with @Autowired annotation
             if (hasAutowiredAnnotation(constructor)) {
                 explicitAutowiringConstructor = constructor;
             }
@@ -292,12 +289,10 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
 
     private Object instantiateBean(String beanName, BeanDefinition beanDefinition) {
         String className = retrieveBeanClassName(beanName, beanDefinition);
+        Class<?> beanClass = resolveClass(className, beanName);
 
         try {
-            Class<?> beanClass = Class.forName(className);
             return beanClass.getConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new BeanFactoryException("Class not found by name='%s' for bean='%s': ".formatted(className, beanName), e);
         } catch (NoSuchMethodException e) {
             throw new BeanFactoryException("Class has no public default constructor: " + className, e);
         } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
@@ -365,14 +360,11 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     protected List<Map.Entry<String, BeanDefinition>> findCandidates(Class<?> targetClass) {
         List<Map.Entry<String, BeanDefinition>> candidates = new ArrayList<>();
         for (Map.Entry<String, BeanDefinition> definitionEntry : beanDefinitions.entrySet()) {
+            String beanName = definitionEntry.getKey();
             BeanDefinition candidateDefinition = definitionEntry.getValue();
+            Class<?> candidateClass = resolveClass(candidateDefinition.getBeanClassName(), beanName);
 
-            try {
-                Class<?> candidateClass = Class.forName(candidateDefinition.getBeanClassName());
-                if (targetClass.isAssignableFrom(candidateClass)) candidates.add(definitionEntry);
-            } catch (ClassNotFoundException e) {
-                throw new BeanFactoryException("Class not found by name='%s' for bean='%s': ".formatted(candidateDefinition.getBeanClassName(), definitionEntry.getKey()), e);
-            }
+            if (targetClass.isAssignableFrom(candidateClass)) candidates.add(definitionEntry);
         }
 
         return candidates;
@@ -443,5 +435,16 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     private static String retrieveBeanClassName(String beanName, BeanDefinition beanDefinition) {
         return Optional.ofNullable(beanDefinition.getBeanClassName())
                 .orElseThrow(() -> new BeanFactoryException("Bean class name is not set for bean: " + beanName));
+    }
+
+
+    private static Class<?> resolveClass(String className, String beanName) {
+        Class<?> beanClass;
+        try {
+            beanClass = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new BeanFactoryException("Class not found by name='%s' for bean='%s': ".formatted(className, beanName), e);
+        }
+        return beanClass;
     }
 }
