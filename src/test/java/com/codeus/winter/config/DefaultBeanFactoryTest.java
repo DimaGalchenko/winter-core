@@ -149,6 +149,7 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
+    @DisplayName("Should initialize bean with dependencies using declared non-annotated constructor and ignore default one")
     void testInitializeBeanWithDependenciesUsingDeclaredNonAnnotatedConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanA", beanDefinitionA);
@@ -184,6 +185,7 @@ class DefaultBeanFactoryTest {
     //TODO: consider grouping constructor related fixtures in one class 'AutowiringConstructors'
     // if decided, rename the file for cyclic dependencies from `BeansWithCyclicDependency` -> `CyclicDependencies`
     @Test
+    @DisplayName("Should initialize bean using default constructor ignoring declared non-annotated constructors")
     void testInitializeBeanWithMultipleConstructorsUsingDefaultConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithMultipleNonAnnotatedAndDefaultConstructors",
@@ -198,6 +200,7 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
+    @DisplayName("Should fail to initialize bean with multiple annotated constructors")
     void testFailInitializeBeanWithMultipleAutowiringConstructors() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithMultipleAutowiringConstructors",
@@ -209,6 +212,7 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
+    @DisplayName("Should fail to initialize bean with single private default constructor")
     void testFailInitializeBeanWithSinglePrivateDefaultConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithPrivateConstructor",
@@ -219,6 +223,7 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
+    @DisplayName("Should fail to initialize bean with multiple non-annotated constructors and without default one")
     void testFailInitializeBeanWithMultipleNonAnnotatedConstructors() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithNonAnnotatedConstructors",
