@@ -2,6 +2,7 @@ package com.codeus.winter.test;
 
 import com.codeus.winter.annotation.Autowired;
 
+@SuppressWarnings("unused")
 public class BeanWithAnnotatedConstructor {
 
     private final BeanA beanA;

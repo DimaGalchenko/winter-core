@@ -1,6 +1,6 @@
 package com.codeus.winter.test;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "ClassCanBeRecord"})
 public class BeanWithSelfInjection {
 
     private final BeanWithSelfInjection bean;
