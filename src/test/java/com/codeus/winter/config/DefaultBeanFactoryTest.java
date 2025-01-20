@@ -132,10 +132,10 @@ class DefaultBeanFactoryTest {
 
     @Test
     @DisplayName("Should initialize bean with dependencies using single declared non-annotated constructor")
-    void testInitializeBeanWithDependenciesUsingDeclaredNotAnnotatedConstructor() {
+    void testInitializeBeanWithDependenciesUsingSingleNotAnnotatedConstructor() {
         Map<String, BeanDefinition> beanDefinitionMap = new HashMap<>();
-        beanDefinitionMap.put("BeanB", beanDefinitionB);
         beanDefinitionMap.put("BeanA", beanDefinitionA);
+        beanDefinitionMap.put("BeanB", beanDefinitionB);
 
         DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
         factory.initializeBeans();
@@ -149,17 +149,28 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
+    void testInitializeBeanWithDependenciesUsingDeclaredNonAnnotatedConstructor() {
+        DefaultBeanFactory factory = new DefaultBeanFactory();
+        factory.registerBeanDefinition("BeanA", beanDefinitionA);
+        factory.registerBeanDefinition("BeanWithNonAnnotatedAndDefaultConstructors", beanDefinitionMock(BeanWithNonAnnotatedAndDefaultConstructors.class));
+
+        factory.initializeBeans();
+        BeanA beanA = factory.getBean(BeanA.class);
+        BeanWithNonAnnotatedAndDefaultConstructors beanB = factory.getBean(BeanWithNonAnnotatedAndDefaultConstructors.class);
+
+        assertNotNull(beanA);
+        assertNotNull(beanB);
+        assertNotNull(beanB.getBeanA());
+        assertEquals(beanA, beanB.getBeanA());
+    }
+
+    @Test
     @DisplayName("Should initialize bean with dependencies using declared annotated constructor")
     void testInitializeBeanWithDependenciesUsingDeclaredAnnotatedConstructor() {
-        BeanDefinition beanDefinition = mock(BeanDefinition.class);
-        when(beanDefinition.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanWithAnnotatedConstructor");
-        when(beanDefinition.isSingleton()).thenReturn(true);
+        DefaultBeanFactory factory = new DefaultBeanFactory();
+        factory.registerBeanDefinition("BeanWithAnnotatedConstructor", beanDefinitionMock(BeanWithAnnotatedConstructor.class));
+        factory.registerBeanDefinition("BeanA", beanDefinitionA);
 
-        Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
-        beanDefinitionMap.put("BeanWithAnnotatedConstructor", beanDefinition);
-        beanDefinitionMap.put("BeanA", beanDefinitionA);
-
-        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
         factory.initializeBeans();
         BeanA beanA = factory.getBean(BeanA.class);
         BeanWithAnnotatedConstructor beanWrapper = factory.getBean(BeanWithAnnotatedConstructor.class);
@@ -168,6 +179,53 @@ class DefaultBeanFactoryTest {
         assertNotNull(beanWrapper);
         assertNotNull(beanWrapper.getBeanA());
         assertEquals(beanA, beanWrapper.getBeanA());
+    }
+
+    //TODO: consider grouping constructor related fixtures in one class 'AutowiringConstructors'
+    // if decided, rename the file for cyclic dependencies from `BeansWithCyclicDependency` -> `CyclicDependencies`
+    @Test
+    void testInitializeBeanWithMultipleConstructorsUsingDefaultConstructor() {
+        DefaultBeanFactory factory = new DefaultBeanFactory();
+        factory.registerBeanDefinition("BeanWithMultipleNonAnnotatedAndDefaultConstructors",
+                beanDefinitionMock(BeanWithMultipleNonAnnotatedAndDefaultConstructors.class));
+
+        factory.initializeBeans();
+        BeanWithMultipleNonAnnotatedAndDefaultConstructors bean = factory.getBean(BeanWithMultipleNonAnnotatedAndDefaultConstructors.class);
+
+        assertNotNull(bean);
+        assertNotNull(bean.getBean());
+        assertEquals(bean.getBean().getClass(), BeanWithMultipleNonAnnotatedAndDefaultConstructors.DefaultBean.class);
+    }
+
+    @Test
+    void testFailInitializeBeanWithMultipleAutowiringConstructors() {
+        DefaultBeanFactory factory = new DefaultBeanFactory();
+        factory.registerBeanDefinition("BeanWithMultipleAutowiringConstructors",
+                beanDefinitionMock(BeanWithMultipleAutowiringConstructors.class));
+
+        assertThrows(BeanFactoryException.class, factory::initializeBeans,
+                "Cannot create bean for class com.codeus.winter.test.BeanWithMultipleAutowiringConstructors, " +
+                        "it has multiple constructors marked with autowire annotation");
+    }
+
+    @Test
+    void testFailInitializeBeanWithSinglePrivateDefaultConstructor() {
+        DefaultBeanFactory factory = new DefaultBeanFactory();
+        factory.registerBeanDefinition("BeanWithPrivateConstructor",
+                beanDefinitionMock(BeanWithPrivateConstructor.class));
+
+        assertThrows(BeanFactoryException.class, factory::initializeBeans,
+                "Class has no public default constructor: com.codeus.winter.test.BeanWithPrivateConstructor");
+    }
+
+    @Test
+    void testFailInitializeBeanWithMultipleNonAnnotatedConstructors() {
+        DefaultBeanFactory factory = new DefaultBeanFactory();
+        factory.registerBeanDefinition("BeanWithNonAnnotatedConstructors",
+                beanDefinitionMock(BeanWithNonAnnotatedConstructors.class));
+
+        assertThrows(BeanFactoryException.class, factory::initializeBeans,
+                "Class has no public default constructor: com.codeus.winter.test.BeanWithNonAnnotatedConstructors");
     }
 
     @Test
@@ -576,5 +634,13 @@ class DefaultBeanFactoryTest {
                 () -> beanFactory.registerBeanDefinition(beanDefinitionName, beanDefinition)
         );
 
+    }
+
+    static BeanDefinition beanDefinitionMock(Class<?> beanClass) {
+        BeanDefinition beanDefinition = mock(BeanDefinition.class);
+        when(beanDefinition.getBeanClassName()).thenReturn(beanClass.getName());
+        when(beanDefinition.isSingleton()).thenReturn(true);
+
+        return beanDefinition;
     }
 }
