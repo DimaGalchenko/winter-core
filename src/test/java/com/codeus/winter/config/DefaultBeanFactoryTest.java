@@ -17,10 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -182,8 +179,6 @@ class DefaultBeanFactoryTest {
         assertEquals(beanA, beanWrapper.getBeanA());
     }
 
-    //TODO: consider grouping constructor related fixtures in one class 'AutowiringConstructors'
-    // if decided, rename the file for cyclic dependencies from `BeansWithCyclicDependency` -> `CyclicDependencies`
     @Test
     @DisplayName("Should initialize bean using default constructor ignoring declared non-annotated constructors")
     void testInitializeBeanWithMultipleConstructorsUsingDefaultConstructor() {
@@ -266,8 +261,8 @@ class DefaultBeanFactoryTest {
         beanDefinitionMap.put("BeanWithDependencyByInterface", beanDefinition);
         DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
 
-        BeanFactoryException exception = assertThrows(BeanFactoryException.class, factory::initializeBeans);
-        assertEquals("Cannot resolve bean for type='com.codeus.winter.test.Common', no bean definitions available", exception.getMessage());
+        assertThrows(BeanNotFoundException.class, factory::initializeBeans,
+                "Cannot resolve bean for type='%s', no bean definitions available".formatted(Common.class.getName()));
     }
 
     @Test
@@ -328,9 +323,8 @@ class DefaultBeanFactoryTest {
         beanDefinitionMap.put("BeanB", beanDefinitionB);
         DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
 
-        BeanFactoryException beanFactoryException = assertThrows(BeanFactoryException.class, factory::initializeBeans);
-        assertEquals("Cannot resolve bean for type='com.codeus.winter.test.BeanA', " +
-                "no bean definitions available", beanFactoryException.getMessage());
+        assertThrows(BeanNotFoundException.class, factory::initializeBeans,
+                "Cannot resolve bean for type='%s', no bean definitions available".formatted(BeanA.class.getName()));
     }
 
     @Test
@@ -366,7 +360,7 @@ class DefaultBeanFactoryTest {
 
         BeanNotFoundException exception = assertThrows(BeanNotFoundException.class,
                 () -> factory.getBean("BeanA"));
-        assertEquals("Bean: BeanA not found", exception.getMessage());
+        assertEquals("Bean for name='BeanA' not found", exception.getMessage());
     }
 
     @Test
@@ -383,26 +377,22 @@ class DefaultBeanFactoryTest {
 
     @Test
     @DisplayName("Should throw exception when try to get by bean name and bean type but factory does not contain bean")
-    void testGetBeanByNameAndTypeThrowExceptionWhenBeanIsNull() {
-        String beanName = "BeanA";
-        DefaultBeanFactory factory = new DefaultBeanFactory(
-                Map.of(beanName, beanDefinitionA)
-        );
+    void testGetBeanByNameAndTypeThrowExceptionWhenFactoryDoesNotContainBeanName() {
+        DefaultBeanFactory factory = new DefaultBeanFactory(Map.of("BeanA", beanDefinitionA));
         factory.initializeBeans();
 
         BeanNotFoundException exception = assertThrows(BeanNotFoundException.class,
-                () -> factory.getBean("beanName", BeanB.class));
+                () -> factory.getBean("BeanB", BeanA.class));
 
-        assertEquals("Bean with a name beanName not found", exception.getMessage());
+        assertEquals("Bean for name='BeanB' not found", exception.getMessage());
+
     }
 
     @Test
     @DisplayName("Should throw exception when try to get by bean name and bean type but bean has another type")
     void testGetBeanByNameAndTypeThrowExceptionWhenBeanHasDifferentType() {
         String beanName = "BeanA";
-        DefaultBeanFactory factory = new DefaultBeanFactory(
-                Map.of(beanName, beanDefinitionA)
-        );
+        DefaultBeanFactory factory = new DefaultBeanFactory(Map.of(beanName, beanDefinitionA));
         factory.initializeBeans();
 
         BeanNotFoundException exception = assertThrows(BeanNotFoundException.class,
@@ -435,20 +425,20 @@ class DefaultBeanFactoryTest {
         factory.initializeBeans();
 
         BeanNotFoundException exception = assertThrows(BeanNotFoundException.class, () -> factory.getBean(BeanA.class));
-        assertEquals("Bean not found for type: " + BeanA.class.getName(), exception.getMessage());
+        assertEquals("Bean for type=%s not found".formatted(BeanA.class.getName()), exception.getMessage());
     }
 
     @Test
     @DisplayName("Should register singleton bean")
     void testRegisterSingletonBean() {
-        Map<String, BeanDefinition> beanDefinitions = spy(Map.class);
+        Map<String, BeanDefinition> beanDefinitionsSpy = spy(new HashMap<>());
 
-        DefaultBeanFactory beanFactory = new DefaultBeanFactory(beanDefinitions);
+        DefaultBeanFactory beanFactory = new DefaultBeanFactory(beanDefinitionsSpy);
         String beanName = "BeanA";
         beanFactory.registerBean(beanName, beanDefinitionA, new BeanA());
 
-        verify(beanDefinitions).put(beanName, beanDefinitionA);
-        verify(beanDefinitions).put(anyString(), any(BeanDefinition.class));
+        verify(beanDefinitionsSpy).put(beanName, beanDefinitionA);
+        verify(beanDefinitionsSpy).put(anyString(), any(BeanDefinition.class));
         BeanA beanA = beanFactory.getBean(beanName, BeanA.class);
         assertNotNull(beanA);
         assertEquals(BeanA.class, beanA.getClass());
@@ -611,6 +601,31 @@ class DefaultBeanFactoryTest {
         assertNotNull(map);
         assertEquals(beanA, map.get(beanA.getClass().getName()));
         assertEquals(beanE, map.get(beanE.getClass().getName()));
+    }
+
+    @Test
+    @DisplayName("Should fail collection injection if factory doesn't have any beans for dependency class")
+    void testFailInjectionListOfBeansWhenNoCandidatesFound() {
+        DefaultBeanFactory factory = new DefaultBeanFactory();
+        factory.registerBeanDefinition("BeanD", beanDefinitionD);
+
+        assertThrows(BeanNotFoundException.class, factory::initializeBeans,
+                "Cannot resolve bean for type='%s', no bean definitions available".formatted(Common.class.getName()));
+    }
+
+    @Test
+    @DisplayName("Should return null for bean definition with the PROTOTYPE scope")
+    void testFailInitializeBeanWithPrototypeScope() {
+        BeanDefinition beanDefinition = mock(BeanDefinition.class);
+        when(beanDefinition.getBeanClassName()).thenReturn(BeanA.class.getName());
+        when(beanDefinition.isSingleton()).thenReturn(false);
+
+        DefaultBeanFactory factory = new DefaultBeanFactory();
+        factory.registerBeanDefinition("BeanA", beanDefinition);
+
+        assertThrows(IllegalArgumentException.class, factory::initializeBeans,
+                "DefaultBeanFactory cannot create bean (name='BeanA') with the PROTOTYPE scope.");
+
     }
 
     @Test
