@@ -337,11 +337,8 @@ public class DefaultBeanFactory implements BeanFactory {
     private Object applyPostProcessor(BiFunction<Object, String, Object> postProcessorFunction,
                                       Object bean,
                                       String beanName) {
-        Object result = postProcessorFunction.apply(bean, beanName);
-        if (result == null) {
-            throw new BeanFactoryException(String.format(
-                    "PostProcessor returned null for bean: %s during post processing", beanName));
-        }
-        return result;
+        return Optional.ofNullable(postProcessorFunction.apply(bean, beanName))
+                .orElseThrow(() -> new BeanFactoryException(String.format(
+                        "PostProcessor returned null for bean: %s during post processing", beanName)));
     }
 }
