@@ -37,7 +37,7 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
         this.beanDefinitionRegistry = new BeanDefinitionRegistryImpl();
         this.scanner = new ClassPathBeanDefinitionScanner(beanDefinitionRegistry);
         scanner.scanPackages(basePackages);
-        this.beanFactory = new DefaultBeanFactory(null);
+        this.beanFactory = new DefaultBeanFactory();
     }
 
     @Override
@@ -69,6 +69,11 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
     @Override
     public final long getStartupDate() {
         return 0;
+    }
+
+    @Override
+    public void registerBeanDefinition(String name, BeanDefinition beanDefinition) {
+        beanFactory.registerBeanDefinition(name, beanDefinition);
     }
 
     @Nullable
