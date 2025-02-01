@@ -397,11 +397,31 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
             targetCandidate = candidates.getFirst();
         } else {
             //TODO #35, #46: there are multiple candidates, add logic to choose one based on @Primary, @Qualifier or other util annotation.
-            String candidateClasses = candidates.stream().map(candidate -> candidate.getValue().getBeanClassName()).collect(Collectors.joining(", "));
-            throw new NotUniqueBeanDefinitionException("Cannot bean for class=%s, multiple beans are available for it: %s".formatted(beanClass, candidateClasses));
+            targetCandidate = checkForPrimary(candidates, beanClass);
+            if (targetCandidate == null) {
+                String candidateClasses = candidates.stream().map(candidate -> candidate.getValue().getBeanClassName()).collect(Collectors.joining(", "));
+                throw new NotUniqueBeanDefinitionException("Cannot bean for class=%s, multiple beans are available for it: %s".formatted(beanClass, candidateClasses));
+            }
+
         }
 
         return getOrCreateBean(targetCandidate.getKey(), targetCandidate.getValue());
+    }
+
+    private Map.Entry<String, BeanDefinition> checkForPrimary(List<Map.Entry<String, BeanDefinition>> candidates, Class<?> beanType) {
+        Map.Entry<String, BeanDefinition> result = null;
+        int primaryAnnotationCount = 0;
+        for (Map.Entry<String, BeanDefinition> candidate : candidates) {
+            var beanDefinition = candidate.getValue();
+            if (beanDefinition.isPrimary()) {
+                primaryAnnotationCount++;
+                if (primaryAnnotationCount > 1) {
+                    return null;
+                }
+                result = candidate;
+            }
+        }
+        return result;
     }
 
     private Object applyPostProcessorsBeforeInitialization(Object bean, String beanName) {
