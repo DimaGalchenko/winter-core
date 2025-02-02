@@ -2,8 +2,6 @@ package com.codeus.winter.config;
 
 import com.codeus.winter.exception.BeanNotFoundException;
 
-import java.lang.reflect.InvocationTargetException;
-
 public interface BeanFactory {
 
     /**
@@ -47,14 +45,13 @@ public interface BeanFactory {
     <T> T getBean(Class<T> requiredType) throws BeanNotFoundException;
 
     /**
-     * Creates a bean for the specified bean class.
+     * Creates a prototype-scoped bean for the specified bean class.
      *
      * @param beanClass specified bean class.
      * @param <T>       the type of the bean
      * @return the bean for the specified bean class.
      */
-    <T> T createBean(Class<T> beanClass) throws BeanNotFoundException, NoSuchMethodException,
-            InvocationTargetException, InstantiationException, IllegalAccessException;
+    <T> T createBean(Class<T> beanClass);
 
     /**
      * Registers a bean for its name, BeanDefinition, and instance.

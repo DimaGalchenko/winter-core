@@ -11,11 +11,9 @@ import com.codeus.winter.exception.BeanNotFoundException;
 import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.ObjectUtils;
 
-import java.lang.reflect.InvocationTargetException;
-
 /**
  * Standalone application context, accepting component classes as input.
- *
+ * <p>
  * This includes @Configuration-annotated classes, plain @Component types,
  * and JSR-330 compliant classes using jakarta.inject annotations.
  * Allows registering classes one by one using {@code register(Class...)}
@@ -95,9 +93,7 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
     }
 
     @Override
-    public final <T> T createBean(Class<T> beanClass)
-            throws BeanNotFoundException, NoSuchMethodException, InvocationTargetException,
-            InstantiationException, IllegalAccessException {
+    public final <T> T createBean(Class<T> beanClass) throws BeanNotFoundException {
         return beanFactory.createBean(beanClass);
     }
 
