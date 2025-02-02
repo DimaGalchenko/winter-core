@@ -1,6 +1,7 @@
 package com.codeus.winter.config;
 
 import com.codeus.winter.annotation.Autowired;
+import com.codeus.winter.annotation.QualifierAnnotationAutowireCandidateResolver;
 import com.codeus.winter.config.impl.BeanDefinitionImpl;
 import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
@@ -27,6 +28,8 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     private final Map<String, BeanDefinition> beanDefinitions;
     private final List<BeanPostProcessor> postProcessors = new ArrayList<>();
     private final Set<String> singletonsCurrentlyInCreation = new HashSet<>(16);
+    private final QualifierAnnotationAutowireCandidateResolver qualifierAnnotationAutowireCandidateResolver =
+            new QualifierAnnotationAutowireCandidateResolver();
 
     private final ConstructorResolver constructorResolver;
 
@@ -102,7 +105,8 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      */
     @Override
     public final <T> T getBean(@Nonnull final Class<T> requiredType) throws BeanNotFoundException {
-        Object bean = resolveBean(requiredType);
+        DependencyDescriptor descriptor = new DependencyDescriptor(requiredType);
+        Object bean = resolveBean(descriptor);
         if (bean == null) throw new BeanNotFoundException("Bean for type=%s not found".formatted(requiredType.getName()));
 
         return requiredType.cast(bean);
@@ -411,7 +415,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      */
     protected Object resolveSingleDependency(DependencyDescriptor descriptor) {
         Class<?> dependencyClass = descriptor.getDependencyClass();
-        Object resolvedBean = resolveBean(dependencyClass);
+        Object resolvedBean = resolveBean(descriptor);
         if (resolvedBean == null) throw new BeanNotFoundException(
                 "Cannot resolve bean for type='%s', no bean definitions available".formatted(dependencyClass.getName()));
 
@@ -441,14 +445,15 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     /**
      * Resolves bean instance for given class. Handles multiple candidates using qualifier annotations.
      *
-     * @param beanClass a bean class to resolve for.
+     * @param descriptor a dependency descriptor class.
      * @return bean instance that is assignable from the given class,
      * {@code null} - if no candidates found for given class.
      * @throws NotUniqueBeanDefinitionException if multiple candidates available for the given class,
      *                                          and it is not possible to determine the required one (missing qualifier metadata)
      */
     @Nullable
-    protected Object resolveBean(Class<?> beanClass) {
+    protected Object resolveBean(DependencyDescriptor descriptor) {
+        Class<?> beanClass = descriptor.getDependencyClass();
         List<Map.Entry<String, BeanDefinition>> candidates = findCandidates(beanClass);
 
         if (candidates.isEmpty()) return null;
@@ -457,7 +462,15 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         if (candidates.size() == 1) {
             targetCandidate = candidates.getFirst();
         } else {
-            //TODO #35, #46: there are multiple candidates, add logic to choose one based on @Primary, @Qualifier or other util annotation.
+            String suggestedName = qualifierAnnotationAutowireCandidateResolver.getSuggestedName(descriptor);
+            if (suggestedName != null) {
+                for (String beanName : candidates.stream().map(Map.Entry::getKey).toList()) {
+                    if (beanName.equals(suggestedName)) {
+                        return beanName;
+                    }
+                }
+            }
+            //TODO #35: there are multiple candidates, add logic to choose one based on @Primary or other util annotation.
             String candidateClasses = candidates.stream()
                     .map(candidate -> candidate.getValue().getBeanClassName())
                     .sorted(Comparator.nullsLast(Comparator.naturalOrder()))

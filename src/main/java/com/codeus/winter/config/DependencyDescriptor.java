@@ -1,5 +1,6 @@
 package com.codeus.winter.config;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Objects;
@@ -12,15 +13,21 @@ public class DependencyDescriptor {
     private final Class<?> dependencyClass;
     private final Type dependencyType;
     private final String dependencyName;
+    private final Annotation[] annotations;
 
-    public DependencyDescriptor(String dependencyName, Type dependencyType, Class<?> dependencyClass) {
+    public DependencyDescriptor(
+            String dependencyName,
+            Type dependencyType,
+            Class<?> dependencyClass,
+            Annotation[] annotations) {
         this.dependencyName = dependencyName;
         this.dependencyClass = dependencyClass;
         this.dependencyType = dependencyType;
+        this.annotations = annotations;
     }
 
     public DependencyDescriptor(String dependencyName, Type dependencyType) {
-        this(dependencyName, dependencyType, getRawType(dependencyType));
+        this(dependencyName, dependencyType, getRawType(dependencyType), new Annotation[0]);
     }
 
     public DependencyDescriptor(Type dependencyType) {
@@ -49,6 +56,10 @@ public class DependencyDescriptor {
 
     public Type getDependencyType() {
         return dependencyType;
+    }
+
+    public Annotation[] getAnnotations() {
+        return annotations;
     }
 
     @Override

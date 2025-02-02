@@ -2,6 +2,7 @@ package com.codeus.winter.config;
 
 import com.codeus.winter.exception.BeanFactoryException;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
@@ -50,7 +51,13 @@ public class ConstructorResolver {
             String dependencyName = parameter.getName();
             Class<?> dependencyClass = parameter.getType();
             Type dependencyType = parameterTypes[i];
-            DependencyDescriptor descriptor = new DependencyDescriptor(dependencyName, dependencyType, dependencyClass);
+            Annotation[] annotations = parameter.getAnnotations();
+            DependencyDescriptor descriptor = new DependencyDescriptor(
+                    dependencyName,
+                    dependencyType,
+                    dependencyClass,
+                    annotations
+            );
 
             resolvedDependencies[i] = beanFactory.resolveDependency(descriptor);
         }
