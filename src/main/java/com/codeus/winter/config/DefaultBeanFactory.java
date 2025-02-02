@@ -65,7 +65,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     @Override
     public final Object getBean(@Nonnull final String name) throws BeanNotFoundException {
         BeanDefinition beanDefinition = getBeanDefinition(name);
-        return getOrCreateBean(name, beanDefinition);
+        return getBean(name, beanDefinition);
     }
 
     /**
@@ -82,7 +82,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     public final <T> T getBean(@Nonnull final String name,
                                @Nonnull final Class<T> requiredType) throws BeanNotFoundException {
         BeanDefinition beanDefinition = getBeanDefinition(name);
-        Object bean = getOrCreateBean(name, beanDefinition);
+        Object bean = getBean(name, beanDefinition);
 
         if (!requiredType.isAssignableFrom(bean.getClass())) {
             throw new BeanNotFoundException(String.format("Bean with a name %s is not compatible with the type %s",
@@ -186,19 +186,20 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
             String beanName = entry.getKey();
             BeanDefinition beanDefinition = entry.getValue();
 
-            getOrCreateBean(beanName, beanDefinition);
+            getBean(beanName, beanDefinition);
         }
     }
 
     /**
-     * Retrieves or creates a bean by bean's name and definition. Handles both scopes: singleton and prototype.
+     * Delegates bean retrieval further depending on the bean's scope.
+     * Currently, only two scopes supported: singleton and prototype.
      *
-     * @param beanName       a name of a bean to retrieve or create.
-     * @param beanDefinition a definition of a bean to retrieve or create.
+     * @param beanName       a name of a bean to retrieve.
+     * @param beanDefinition a definition of a bean to retrieve.
      * @return a bean instance.
      * @throws IllegalArgumentException if given beanDefinition has {@link Scope#PROTOTYPE} scope.
      */
-    private Object getOrCreateBean(String beanName, BeanDefinition beanDefinition) {
+    private Object getBean(String beanName, BeanDefinition beanDefinition) {
         if (beanDefinition.isSingleton()) {
             return getSingleton(beanName, beanDefinition);
         } else {
@@ -396,7 +397,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
             String beanName = candidate.getKey();
             BeanDefinition beanDefinition = candidate.getValue();
 
-            dependencies.add(getOrCreateBean(beanName, beanDefinition));
+            dependencies.add(getBean(beanName, beanDefinition));
         }
 
         return dependencies;
@@ -464,7 +465,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
             throw new NotUniqueBeanDefinitionException("Cannot resolve bean for type='%s', multiple beans are available: %s".formatted(beanClass.getName(), candidateClasses));
         }
 
-        return getOrCreateBean(targetCandidate.getKey(), targetCandidate.getValue());
+        return getBean(targetCandidate.getKey(), targetCandidate.getValue());
     }
 
     private Object applyPostProcessorsBeforeInitialization(Object bean, String beanName) {
