@@ -48,6 +48,15 @@ public interface BeanDefinition {
         return true;
     }
 
+
+    /**
+     * Default method for prototype checking.
+     * @return false.
+     */
+    default boolean isPrototype() {
+        return false;
+    }
+
     /**
      * Set the names of the beans that this bean depends on being initialized.
      * The bean factory will guarantee that these beans get initialized first.
