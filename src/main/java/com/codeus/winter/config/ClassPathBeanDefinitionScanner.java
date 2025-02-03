@@ -42,15 +42,15 @@ public class ClassPathBeanDefinitionScanner {
      * @return set of beans registered if any for tooling registration purposes (never {@code null})
      */
     private void doScan(String... basePackages) {
-        notEmpty(basePackages, "At least one base package must be specified");
+        notEmpty(basePackages);
         for (String basePackage : basePackages) {
             packageBeanRegistration.registerBeans(basePackage);
         }
     }
 
-    public static void notEmpty(Object[] array, String message) {
+    private void notEmpty(Object[] array) {
         if (ObjectUtils.isEmpty(array)) {
-            throw new IllegalArgumentException(message);
+            throw new IllegalArgumentException("At least one base package must be specified");
         }
     }
 }

@@ -84,6 +84,9 @@ public class PackageBeanRegistration {
         List<String> dependencies = new ArrayList<>();
         for (Field field : clazz.getDeclaredFields()) {
             if (field.isAnnotationPresent(Autowired.class) || field.isAnnotationPresent(Qualifier.class)) {
+                if (dependencies.contains(field.getType().getName())) {
+                    continue;
+                }
                 dependencies.add(field.getType().getName());
             }
         }
