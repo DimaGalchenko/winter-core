@@ -22,14 +22,12 @@ public class QualifierAnnotationAutowireCandidateResolver {
         this.qualifierTypes.add(Qualifier.class);
         try {
             this.qualifierTypes.add((Class<? extends Annotation>) Class.forName("jakarta.inject.Qualifier"));
-        }
-        catch (ClassNotFoundException ex) {
+        } catch (ClassNotFoundException ex) {
             // JSR-330 API (as included in Jakarta EE) not available - simply skip.
         }
         try {
             this.qualifierTypes.add((Class<? extends Annotation>) Class.forName("javax.inject.Qualifier"));
-        }
-        catch (ClassNotFoundException ex) {
+        } catch (ClassNotFoundException ex) {
             // JSR-330 API not available - simply skip.
         }
     }

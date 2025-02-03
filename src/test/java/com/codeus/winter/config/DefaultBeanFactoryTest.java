@@ -629,6 +629,22 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
+    @DisplayName("Should initialize a bean with multiple candidates using @Qualifier annotation")
+    void testShouldInitializeBeanWithMultipleCandidatesUsingQualifier() {
+        BeanDefinition beanDefinitionWithQualifierAnnotation = new BeanDefinitionImpl();
+        beanDefinitionWithQualifierAnnotation.setBeanClassName("com.codeus.winter.test.BeanWithQualifierAnnotation");
+        HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
+        beanDefinitionHashMap.put("BeanA", beanDefinitionA);
+        beanDefinitionHashMap.put("BeanE", beanDefinitionE);
+        beanDefinitionHashMap.put("BeanWithQualifier", beanDefinitionWithQualifierAnnotation);
+
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionHashMap);
+        factory.initializeBeans();
+
+        assertNotNull(factory.getBean(BeanWithQualifierAnnotation.class));
+    }
+
+    @Test
     @DisplayName("Should register bean definition")
     void testShouldRegisterBeanDefinition() {
         HashMap<String, BeanDefinition> beanDefinitionMap = spy(HashMap.class);

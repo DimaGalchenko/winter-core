@@ -464,9 +464,9 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         } else {
             String suggestedName = qualifierAnnotationAutowireCandidateResolver.getSuggestedName(descriptor);
             if (suggestedName != null) {
-                for (String beanName : candidates.stream().map(Map.Entry::getKey).toList()) {
-                    if (beanName.equals(suggestedName)) {
-                        return beanName;
+                for (Map.Entry<String, BeanDefinition> candidate : candidates) {
+                    if (candidate.getKey().equals(suggestedName)) {
+                        return getBean(candidate.getKey(), candidate.getValue());
                     }
                 }
             }
