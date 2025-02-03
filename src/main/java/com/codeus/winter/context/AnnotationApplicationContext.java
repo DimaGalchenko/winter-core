@@ -9,9 +9,8 @@ import com.codeus.winter.config.DefaultBeanFactory;
 import com.codeus.winter.config.impl.BeanDefinitionRegistryImpl;
 import com.codeus.winter.exception.BeanNotFoundException;
 import jakarta.annotation.Nullable;
-import org.apache.commons.lang3.ObjectUtils;
-
 import java.lang.reflect.InvocationTargetException;
+import org.apache.commons.lang3.ObjectUtils;
 
 /**
  * Standalone application context, accepting component classes as input.
@@ -37,7 +36,7 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
         this.beanDefinitionRegistry = new BeanDefinitionRegistryImpl();
         this.scanner = new ClassPathBeanDefinitionScanner(beanDefinitionRegistry);
         scanner.scanPackages(basePackages);
-        this.beanFactory = new DefaultBeanFactory(null);
+        this.beanFactory = new DefaultBeanFactory(beanDefinitionRegistry.getRegisteredBeanDefinitions());
     }
 
     @Override

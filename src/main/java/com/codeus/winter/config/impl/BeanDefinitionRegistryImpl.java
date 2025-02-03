@@ -3,7 +3,6 @@ package com.codeus.winter.config.impl;
 import com.codeus.winter.config.BeanDefinition;
 import com.codeus.winter.config.BeanDefinitionRegistry;
 import com.codeus.winter.exception.BeanDefinitionStoreException;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,4 +46,8 @@ public class BeanDefinitionRegistryImpl implements BeanDefinitionRegistry {
         return beanDefinitionMap.size();
     }
 
+    @Override
+    public Map<String, BeanDefinition> getRegisteredBeanDefinitions() {
+        return beanDefinitionMap;
+    }
 }
