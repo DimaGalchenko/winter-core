@@ -8,6 +8,15 @@ import java.lang.reflect.InvocationTargetException;
 public interface BeanFactory {
 
     /**
+     * Registers a single bean definition into the bean factory.
+     *
+     * @param name           the name of the bean
+     * @param beanDefinition the definition of the bean
+     * @throws IllegalArgumentException if a bean with the same name already exists
+     */
+    void registerBeanDefinition(String name, BeanDefinition beanDefinition);
+
+    /**
      * Return the unique bean object of this application context for specified name.
      *
      * @param name bean's name.

@@ -5,6 +5,7 @@ import com.codeus.winter.exception.BeanNotFoundException;
 import com.codeus.winter.exception.NotUniqueBeanDefinitionException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
@@ -15,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -28,9 +30,27 @@ public class DefaultBeanFactory implements BeanFactory {
     private final Map<String, BeanDefinition> beanDefinitions;
     private final List<BeanPostProcessor> postProcessors = new ArrayList<>();
 
+    public DefaultBeanFactory() {
+        this.beanDefinitions = new HashMap<>();
+    }
+
     public DefaultBeanFactory(Map<String, BeanDefinition> beanDefinitions) {
         this.beanDefinitions = beanDefinitions;
-        initializeBeans();
+    }
+
+    /**
+     * Registers a single bean definition into the bean factory.
+     *
+     * @param name           the name of the bean
+     * @param beanDefinition the definition of the bean
+     * @throws IllegalArgumentException if a bean with the same name already exists
+     */
+    @Override
+    public void registerBeanDefinition(@Nonnull final String name, @Nonnull final BeanDefinition beanDefinition) {
+        if (beanDefinitions.containsKey(name)) {
+            throw new BeanFactoryException(String.format("A bean with name '%s' is already defined.", name));
+        }
+        beanDefinitions.put(name, beanDefinition);
     }
 
     /**
@@ -139,7 +159,22 @@ public class DefaultBeanFactory implements BeanFactory {
         }
     }
 
-    private void initializeBeans() {
+    /**
+     * Initializes all beans defined in the bean definitions map.
+     * <p>
+     * This method attempts to initialize each bean, ensuring their dependencies are resolved.
+     * If a bean cannot be initialized due to unresolved dependencies, it is added to a pending list.
+     * The method iteratively resolves dependencies for pending beans until all beans are initialized
+     * or a circular or unresolved dependency is detected, which results in an exception.
+     * </p>
+     * <p>
+     * <b>Note:</b> All postProcessors should be added before calling this method
+     * to ensure they are applied during the bean initialization process.
+     * </p>
+     *
+     * @throws BeanFactoryException if some beans have unresolved dependencies after attempting to initialize them.
+     */
+    public void initializeBeans() {
         Map<String, Boolean> initializationStatuses = new HashMap<>();
         List<String> pendingBeans = new ArrayList<>();
 
@@ -200,6 +235,8 @@ public class DefaultBeanFactory implements BeanFactory {
         }
 
         Object beanInstance = createBeanInstance(beanName, beanDefinition);
+        beanInstance = applyPostProcessorsBeforeInitialization(beanInstance, beanName);
+        beanInstance = applyPostProcessorsAfterInitialization(beanInstance, beanName);
         singletonBeans.put(beanName, beanInstance);
 
         initializationStatuses.put(beanName, true);
@@ -279,5 +316,29 @@ public class DefaultBeanFactory implements BeanFactory {
         return singletonBeans.values().stream()
             .filter(bean -> Arrays.stream(bean.getClass().getInterfaces())
                 .anyMatch(interfaceClass -> interfaceClass.isAssignableFrom(dependencyClass)));
+    }
+
+    private Object applyPostProcessorsBeforeInitialization(Object bean, String beanName) {
+        Object result = bean;
+        for (BeanPostProcessor postProcessor : postProcessors) {
+            result = applyPostProcessor(postProcessor::postProcessBeforeInitialization, bean, beanName);
+        }
+        return result;
+    }
+
+    private Object applyPostProcessorsAfterInitialization(Object bean, String beanName) {
+        Object result = bean;
+        for (BeanPostProcessor postProcessor : postProcessors) {
+            result = applyPostProcessor(postProcessor::postProcessAfterInitialization, bean, beanName);
+        }
+        return result;
+    }
+
+    private Object applyPostProcessor(BiFunction<Object, String, Object> postProcessorFunction,
+                                      Object bean,
+                                      String beanName) {
+        return Optional.ofNullable(postProcessorFunction.apply(bean, beanName))
+                .orElseThrow(() -> new BeanFactoryException(String.format(
+                        "PostProcessor returned null for bean: %s during post processing", beanName)));
     }
 }
