@@ -35,7 +35,8 @@ public class ConstructorResolver {
     }
 
     /**
-     * Makes arguments array for given constructor using {@link AbstractAutowireCapableBeanFactory} as an argument resolver.
+     * Makes arguments array for given constructor using {@link AbstractAutowireCapableBeanFactory} as
+     * an argument resolver.
      *
      * @param constructor a constructor to make arguments array for.
      * @return an array of bean instances that forms arguments array for given constructor.
