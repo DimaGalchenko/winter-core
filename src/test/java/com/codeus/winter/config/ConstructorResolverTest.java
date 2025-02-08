@@ -19,7 +19,7 @@ class ConstructorResolverTest {
 
     private static BeanA beanAMock;
     private static BeanB beanBMock;
-    private static AutowireCapableBeanFactory beanFactoryMock;
+    private static AbstractAutowireCapableBeanFactory beanFactoryMock;
 
     private final ConstructorResolver constructorResolver = new ConstructorResolver(beanFactoryMock);
 
@@ -27,7 +27,7 @@ class ConstructorResolverTest {
     static void setupBeanFactoryMock() {
         beanAMock = mock(BeanA.class);
         beanBMock = mock(BeanB.class);
-        beanFactoryMock = mock(AutowireCapableBeanFactory.class);
+        beanFactoryMock = mock(AbstractAutowireCapableBeanFactory.class);
 
         doReturn(beanAMock).when(beanFactoryMock).resolveDependency(argThat(desc -> desc.getDependencyClass() == BeanA.class));
         doReturn(beanBMock).when(beanFactoryMock).resolveDependency(argThat(desc -> desc.getDependencyClass() == BeanB.class));
