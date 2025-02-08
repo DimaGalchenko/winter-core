@@ -41,7 +41,7 @@ public abstract class AbstractAutowireCapableBeanFactory implements BeanFactory 
     }
 
     /**
-     * Searches for a public constructor for a given bean's name and definition that can be used for autowiring the bean.
+     * Searches for a public constructor for a given bean's name and definition that can be used for bean autowiring.
      * The found constructor is never a default constructor (constructor without arguments).
      *
      * @param beanName       a name of a bean to resolve autowiring constructor for.
@@ -61,25 +61,31 @@ public abstract class AbstractAutowireCapableBeanFactory implements BeanFactory 
         boolean hasExplicitDefaultConstructor = false;
         for (Constructor<?> constructor : constructors) {
             if (hasAutowiredAnnotation(constructor)) {
-                if (explicitAutowiringConstructor != null)
+                if (explicitAutowiringConstructor != null) {
                     throw new BeanFactoryException(("Cannot create bean for class %s, " +
-                            "it has multiple constructors marked with autowire annotation").formatted(beanClass));
+                            "multiple constructors are marked with autowire annotation").formatted(beanClass));
+                }
 
                 explicitAutowiringConstructor = constructor;
             }
 
-            if (constructor.getParameterCount() == 0) hasExplicitDefaultConstructor = true;
+            if (constructor.getParameterCount() == 0) {
+                hasExplicitDefaultConstructor = true;
+            }
 
             candidates.add(constructor);
         }
 
-        if (explicitAutowiringConstructor != null)
+        if (explicitAutowiringConstructor != null) {
             return explicitAutowiringConstructor;
-        else if (candidates.size() == 1 && !hasExplicitDefaultConstructor)
+        } else if (candidates.size() == 1 && !hasExplicitDefaultConstructor) {
             return candidates.getFirst();
-        else if (candidates.size() == 2 && hasExplicitDefaultConstructor)
-            return candidates.stream().filter(constructor -> constructor.getParameterCount() > 0).findAny().orElse(null);
-        else return null;
+        } else if (candidates.size() == 2 && hasExplicitDefaultConstructor) {
+            return candidates.stream().filter(constructor -> constructor.getParameterCount() > 0).findAny()
+                    .orElse(null);
+        } else {
+            return null;
+        }
     }
 
     /**

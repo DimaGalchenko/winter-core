@@ -12,8 +12,9 @@ import java.lang.reflect.Constructor;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 class ConstructorResolverTest {
 
@@ -29,8 +30,10 @@ class ConstructorResolverTest {
         beanBMock = mock(BeanB.class);
         beanFactoryMock = mock(AbstractAutowireCapableBeanFactory.class);
 
-        doReturn(beanAMock).when(beanFactoryMock).resolveDependency(argThat(desc -> desc.getDependencyClass() == BeanA.class));
-        doReturn(beanBMock).when(beanFactoryMock).resolveDependency(argThat(desc -> desc.getDependencyClass() == BeanB.class));
+        doReturn(beanAMock).when(beanFactoryMock)
+                .resolveDependency(argThat(desc -> desc.getDependencyClass() == BeanA.class));
+        doReturn(beanBMock).when(beanFactoryMock)
+                .resolveDependency(argThat(desc -> desc.getDependencyClass() == BeanB.class));
     }
 
     @Nested
@@ -60,7 +63,7 @@ class ConstructorResolverTest {
 
     @Nested
     @DisplayName("makeArgumentArray")
-    class makeArgumentArrayTests {
+    class MakeArgumentArrayTests {
 
         @Test
         @DisplayName("should make an argument array for a constructor with multiple arguments")

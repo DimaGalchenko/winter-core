@@ -1,7 +1,7 @@
 package com.codeus.winter.test;
 
 @SuppressWarnings("unused")
-public class BeanWithPrivateConstructor {
+public final class BeanWithPrivateConstructor {
 
     private BeanWithPrivateConstructor() {
     }

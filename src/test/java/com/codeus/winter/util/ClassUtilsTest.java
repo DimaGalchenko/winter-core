@@ -3,7 +3,8 @@ package com.codeus.winter.util;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ClassUtilsTest {
 
@@ -21,5 +22,6 @@ class ClassUtilsTest {
         assertThrows(IllegalArgumentException.class, () -> ClassUtils.resolveClass("42.TestClass"));
     }
 
-    static class TestClass {}
+    static class TestClass {
+    }
 }
