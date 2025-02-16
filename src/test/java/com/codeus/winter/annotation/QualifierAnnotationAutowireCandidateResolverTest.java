@@ -24,7 +24,7 @@ class QualifierAnnotationAutowireCandidateResolverTest {
     }
 
     @Test
-    void testGetSuggestedName_WithQualifier() {
+    void testGetSuggestedNameWithQualifier() {
         Qualifier annotation = mock(Qualifier.class);
         when(annotation.value()).thenReturn("testName");
         when(annotation.annotationType()).thenAnswer(inv -> Qualifier.class);
@@ -35,7 +35,7 @@ class QualifierAnnotationAutowireCandidateResolverTest {
     }
 
     @Test
-    void testGetSuggestedName_WithoutQualifier() {
+    void testGetSuggestedNameWithoutQualifier() {
         when(descriptor.getAnnotations()).thenReturn(new Annotation[] {});
 
         String suggestedName = resolver.getSuggestedName(descriptor);
@@ -43,7 +43,7 @@ class QualifierAnnotationAutowireCandidateResolverTest {
     }
 
     @Test
-    void testGetSuggestedName_NonStringValue() {
+    void testGetSuggestedNameNonStringValue() {
         Annotation annotation = mock(Annotation.class);
         when(annotation.annotationType()).thenAnswer(inv -> Qualifier.class);
         when(descriptor.getAnnotations()).thenReturn(new Annotation[]{annotation});

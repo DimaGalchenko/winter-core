@@ -1,6 +1,5 @@
 package com.codeus.winter.config;
 
-import com.codeus.winter.config.impl.BeanDefinitionImpl;
 import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
 import com.codeus.winter.exception.BeanNotFoundException;
@@ -17,6 +16,7 @@ import com.codeus.winter.test.BeanWithMultipleNonAnnotatedAndDefaultConstructors
 import com.codeus.winter.test.BeanWithNonAnnotatedAndDefaultConstructors;
 import com.codeus.winter.test.BeanWithNonAnnotatedConstructors;
 import com.codeus.winter.test.BeanWithPrivateConstructor;
+import com.codeus.winter.test.BeanWithQualifierAnnotation;
 import com.codeus.winter.test.BeanWithSelfInjection;
 import com.codeus.winter.test.BeansWithCyclicDependency;
 import com.codeus.winter.test.Common;
@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -166,7 +167,7 @@ class DefaultBeanFactoryTest {
             "and ignoring default one")
     void testInitializeBeanWithDependenciesUsingDeclaredNonAnnotatedConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
-        BeanDefinition beanDefinition = beanDefinitionMock(BeanWithNonAnnotatedAndDefaultConstructors.class);
+        BeanDefinition beanDefinition = singletonBeanDefinitionMock(BeanWithNonAnnotatedAndDefaultConstructors.class);
         factory.registerBeanDefinition("BeanA", beanDefinitionA);
         factory.registerBeanDefinition("BeanWithNonAnnotatedAndDefaultConstructors", beanDefinition);
 
@@ -184,7 +185,7 @@ class DefaultBeanFactoryTest {
     @DisplayName("Should initialize bean with dependencies using declared annotated constructor")
     void testInitializeBeanWithDependenciesUsingDeclaredAnnotatedConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
-        BeanDefinition beanDefinition = beanDefinitionMock(BeanWithAnnotatedConstructor.class);
+        BeanDefinition beanDefinition = singletonBeanDefinitionMock(BeanWithAnnotatedConstructor.class);
         factory.registerBeanDefinition("BeanWithAnnotatedConstructor", beanDefinition);
         factory.registerBeanDefinition("BeanA", beanDefinitionA);
 
@@ -203,7 +204,7 @@ class DefaultBeanFactoryTest {
     void testInitializeBeanWithMultipleConstructorsUsingDefaultConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithMultipleNonAnnotatedAndDefaultConstructors",
-                beanDefinitionMock(BeanWithMultipleNonAnnotatedAndDefaultConstructors.class));
+                singletonBeanDefinitionMock(BeanWithMultipleNonAnnotatedAndDefaultConstructors.class));
 
         factory.initializeBeans();
         var bean = factory.getBean(BeanWithMultipleNonAnnotatedAndDefaultConstructors.class);
@@ -218,7 +219,7 @@ class DefaultBeanFactoryTest {
     void testFailInitializeBeanWithMultipleAutowiringConstructors() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithMultipleAutowiringConstructors",
-                beanDefinitionMock(BeanWithMultipleAutowiringConstructors.class));
+                singletonBeanDefinitionMock(BeanWithMultipleAutowiringConstructors.class));
 
         assertThrows(BeanFactoryException.class, factory::initializeBeans,
                 "Cannot create bean for class %s, multiple constructors are marked with autowire annotation"
@@ -231,7 +232,7 @@ class DefaultBeanFactoryTest {
     void testFailInitializeBeanWithSinglePrivateDefaultConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithPrivateConstructor",
-                beanDefinitionMock(BeanWithPrivateConstructor.class));
+                singletonBeanDefinitionMock(BeanWithPrivateConstructor.class));
 
         assertThrows(BeanFactoryException.class, factory::initializeBeans, "Class has no public default constructor: %s"
                 .formatted(BeanWithPrivateConstructor.class.getName()));
@@ -242,7 +243,7 @@ class DefaultBeanFactoryTest {
     void testFailInitializeBeanWithMultipleNonAnnotatedConstructors() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithNonAnnotatedConstructors",
-                beanDefinitionMock(BeanWithNonAnnotatedConstructors.class));
+                singletonBeanDefinitionMock(BeanWithNonAnnotatedConstructors.class));
 
         assertThrows(BeanFactoryException.class, factory::initializeBeans, "Class has no public default constructor: %s"
                 .formatted(BeanWithNonAnnotatedConstructors.class.getName()));
@@ -644,8 +645,29 @@ class DefaultBeanFactoryTest {
         factory.registerBeanDefinition("BeanA", beanDefinition);
 
         assertThrows(IllegalArgumentException.class, factory::initializeBeans,
-                "DefaultBeanFactory cannot create bean (name='BeanA') with the PROTOTYPE scope.");
+                "DefaultBeanFactory cannot create bean (name='BeanA') with the 'MY_CUSTOM_SCOPE' scope.");
 
+    }
+
+    @Test
+    @DisplayName("Should initialize a bean with multiple candidates using @Qualifier annotation")
+    void testShouldInitializeBeanWithMultipleCandidatesUsingQualifier() {
+        BeanDefinition beanDefinitionWithQualifierAnnotation = singletonBeanDefinitionMock(BeanWithQualifierAnnotation.class);
+        beanDefinitionWithQualifierAnnotation.setBeanClassName("com.codeus.winter.test.BeanWithQualifierAnnotation");
+        HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
+        beanDefinitionHashMap.put("BeanA", beanDefinitionA);
+        beanDefinitionHashMap.put("BeanE", beanDefinitionE);
+        beanDefinitionHashMap.put("BeanWithQualifier", beanDefinitionWithQualifierAnnotation);
+
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionHashMap);
+        factory.initializeBeans();
+
+        assertNotNull(factory.getBean(BeanWithQualifierAnnotation.class));
+        BeanWithQualifierAnnotation bwqa = factory.getBean(
+                "BeanWithQualifier",
+                BeanWithQualifierAnnotation.class
+        );
+        assertNotNull(bwqa.getCommon());
     }
 
     @Test

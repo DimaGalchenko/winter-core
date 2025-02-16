@@ -26,6 +26,8 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.codeus.winter.util.ClassUtils.resolveClass;
+
 /**
  * Default implementation of the {@link BeanFactory} interface.
  */
@@ -111,7 +113,7 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
      */
     @Override
     public final <T> T getBean(@Nonnull final Class<T> requiredType) throws BeanNotFoundException {
-        Object bean = resolveBean(requiredType);
+        Object bean = resolveBean(new DependencyDescriptor(requiredType));
         if (bean == null) {
             throw new BeanNotFoundException("Bean for type=%s not found".formatted(requiredType.getName()));
         }
@@ -308,7 +310,7 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
      */
     private Object instantiateBean(String beanName, BeanDefinition beanDefinition) {
         String className = retrieveBeanClassName(beanDefinition, beanName);
-        Class<?> beanClass = ClassUtils.resolveClass(className);
+        Class<?> beanClass = resolveClass(className);
 
         try {
             return beanClass.getConstructor().newInstance();
@@ -328,7 +330,7 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
      * @return bean instance that conform the given {@link DependencyDescriptor}.
      */
     @Override
-    protected Object resolveDependency(DependencyDescriptor descriptor) {
+    public Object resolveDependency(DependencyDescriptor descriptor) {
         Object dependency;
         Class<?> dependencyClass = descriptor.getDependencyClass();
         Type dependencyType = descriptor.getDependencyType();
@@ -386,7 +388,7 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
      */
     protected Object resolveSingleDependency(DependencyDescriptor descriptor) {
         Class<?> dependencyClass = descriptor.getDependencyClass();
-        Object resolvedBean = resolveBean(dependencyClass);
+        Object resolvedBean = resolveBean(descriptor);
         if (resolvedBean == null) {
             throw new BeanNotFoundException(
                 "Cannot resolve bean for type='%s', no bean definition available".formatted(dependencyClass.getName()));
@@ -396,8 +398,7 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
     }
 
     /**
-     * Finds all available bean candidates' names and definitions in the bean definitions that conform
-     * given target class.
+     * Finds all available bean candidates' names and definitions in the bean definitions that conform given target class.
      *
      * @param targetClass a class to find bean candidates for.
      * @return a list of bean candidates' names and definitions that are assignable from the given target class.
@@ -406,8 +407,9 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
     protected List<Map.Entry<String, BeanDefinition>> findCandidates(Class<?> targetClass) {
         List<Map.Entry<String, BeanDefinition>> candidates = new ArrayList<>();
         for (Map.Entry<String, BeanDefinition> definitionEntry : beanDefinitions.entrySet()) {
+            String beanName = definitionEntry.getKey();
             BeanDefinition candidateDefinition = definitionEntry.getValue();
-            Class<?> candidateClass = ClassUtils.resolveClass(candidateDefinition.getBeanClassName());
+            Class<?> candidateClass = resolveClass(candidateDefinition.getBeanClassName());
 
             if (targetClass.isAssignableFrom(candidateClass)) {
                 candidates.add(definitionEntry);
@@ -418,17 +420,17 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
     }
 
     /**
-     * Resolves bean instance for given class. Handles multiple candidates using qualifier annotations.
+     * Resolves bean instance for given descriptor. Handles multiple candidates using qualifier annotations.
      *
-     * @param beanClass a bean class to resolve for.
-     * @return bean instance that is assignable from the given class,
-     * {@code null} - if no candidates found for given class.
-     * @throws NotUniqueBeanDefinitionException if multiple candidates available for the given class,
-     *                                          and it is not possible to determine the required one
-     *                                          (missing qualifier metadata)
+     * @param descriptor a dependency descriptor class.
+     * @return bean instance that is assignable from the given descriptor,
+     * {@code null} - if no candidates found for given descriptor.
+     * @throws NotUniqueBeanDefinitionException if multiple candidates available for the given descriptor,
+     *                                          and it is not possible to determine the required one (missing qualifier metadata)
      */
     @Nullable
-    protected Object resolveBean(Class<?> beanClass) {
+    protected Object resolveBean(DependencyDescriptor descriptor) {
+        Class<?> beanClass = descriptor.getDependencyClass();
         List<Map.Entry<String, BeanDefinition>> candidates = findCandidates(beanClass);
 
         if (candidates.isEmpty()) {
@@ -439,8 +441,15 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
         if (candidates.size() == 1) {
             targetCandidate = candidates.getFirst();
         } else {
-            //TODO #35, #46: there are multiple candidates,
-            // add logic to choose one based on @Primary, @Qualifier or other util annotation.
+            String suggestedName = qualifierAnnotationAutowireCandidateResolver.getSuggestedName(descriptor);
+            if (suggestedName != null) {
+                for (Map.Entry<String, BeanDefinition> candidate : candidates) {
+                    if (candidate.getKey().equals(suggestedName)) {
+                        return getBean(candidate.getKey(), candidate.getValue());
+                    }
+                }
+            }
+            //TODO #35: there are multiple candidates, add logic to choose one based on @Primary or other util annotation.
             String candidateClasses = candidates.stream()
                     .map(candidate -> candidate.getValue().getBeanClassName())
                     .sorted(Comparator.nullsLast(Comparator.naturalOrder()))

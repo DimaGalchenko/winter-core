@@ -7,7 +7,10 @@ import com.codeus.winter.config.impl.BeanDefinitionImpl;
  * to enclose details about {@link BeanDefinition} implementation in this class.
  * NOTE: Internal use only.
  */
-class BeanDefinitionFactory {
+final class BeanDefinitionFactory {
+
+    private BeanDefinitionFactory() {
+    }
 
     /**
      * Creates simple {@link BeanDefinition} with {@link BeanDefinition#SCOPE_PROTOTYPE} scope.

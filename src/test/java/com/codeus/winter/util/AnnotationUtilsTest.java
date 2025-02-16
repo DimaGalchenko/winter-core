@@ -7,49 +7,55 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 
 public class AnnotationUtilsTest {
+    private static final int TEST_ANNOTATION_VALUE = 99;
 
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     public @interface TestAnnotation {
         String value() default "default";
+
         int number() default 42;
     }
 
-    @TestAnnotation(value = "testValue", number = 99)
-    private static class AnnotatedClass {}
+    @TestAnnotation(value = "testValue", number = TEST_ANNOTATION_VALUE)
+    private static final class AnnotatedClass {
+    }
 
     @Test
-    void testGetValue_DefaultValueAttribute() {
+    void shouldGetDefaultValueAttribute() {
         TestAnnotation annotation = AnnotatedClass.class.getAnnotation(TestAnnotation.class);
         assertNotNull(annotation);
         assertEquals("testValue", AnnotationUtils.getValue(annotation));
     }
 
     @Test
-    void testGetValue_SpecificAttribute() {
+    void shouldGetSpecificAttribute() {
         TestAnnotation annotation = AnnotatedClass.class.getAnnotation(TestAnnotation.class);
         assertNotNull(annotation);
-        assertEquals(99, AnnotationUtils.getValue(annotation, "number"));
+        assertEquals(TEST_ANNOTATION_VALUE, AnnotationUtils.getValue(annotation, "number"));
     }
 
     @Test
-    void testGetValue_NonExistentAttribute() {
+    void shouldGetNonExistentAttribute() {
         TestAnnotation annotation = AnnotatedClass.class.getAnnotation(TestAnnotation.class);
         assertNotNull(annotation);
         assertNull(AnnotationUtils.getValue(annotation, "nonExistent"));
     }
 
     @Test
-    void testGetValue_NullAnnotation() {
+    void shouldGetNullAnnotation() {
         assertNull(AnnotationUtils.getValue(null));
         assertNull(AnnotationUtils.getValue(null, "value"));
     }
 
     @Test
-    void testGetValue_NullOrEmptyAttributeName() {
+    void shouldGetNullOrEmptyAttributeName() {
         TestAnnotation annotation = AnnotatedClass.class.getAnnotation(TestAnnotation.class);
         assertNotNull(annotation);
         assertNull(AnnotationUtils.getValue(annotation, null));

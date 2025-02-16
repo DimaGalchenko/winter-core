@@ -53,7 +53,8 @@ public interface BeanFactory {
      * @param <T>       the type of the bean
      * @return the bean for the specified bean class.
      */
-    <T> T createBean(Class<T> beanClass);
+    <T> T createBean(Class<T> beanClass) throws BeanNotFoundException, NoSuchMethodException,
+            InvocationTargetException, InstantiationException, IllegalAccessException;
 
     /**
      * Registers a bean for its name, BeanDefinition, and instance.

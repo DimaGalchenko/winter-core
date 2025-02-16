@@ -4,7 +4,7 @@ import com.codeus.winter.annotation.Autowired;
 import com.codeus.winter.annotation.Qualifier;
 
 public class BeanWithQualifierAnnotation {
-    Common common;
+    private final Common common;
 
     @Autowired
     public BeanWithQualifierAnnotation(@Qualifier("BeanA") Common common) {
