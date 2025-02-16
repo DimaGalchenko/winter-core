@@ -652,7 +652,9 @@ class DefaultBeanFactoryTest {
     @Test
     @DisplayName("Should initialize a bean with multiple candidates using @Qualifier annotation")
     void testShouldInitializeBeanWithMultipleCandidatesUsingQualifier() {
-        BeanDefinition beanDefinitionWithQualifierAnnotation = singletonBeanDefinitionMock(BeanWithQualifierAnnotation.class);
+        BeanDefinition beanDefinitionWithQualifierAnnotation = singletonBeanDefinitionMock(
+                BeanWithQualifierAnnotation.class
+        );
         beanDefinitionWithQualifierAnnotation.setBeanClassName("com.codeus.winter.test.BeanWithQualifierAnnotation");
         HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
         beanDefinitionHashMap.put("BeanA", beanDefinitionA);

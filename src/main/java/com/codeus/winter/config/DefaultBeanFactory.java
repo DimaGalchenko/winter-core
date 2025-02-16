@@ -6,7 +6,6 @@ import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
 import com.codeus.winter.exception.BeanNotFoundException;
 import com.codeus.winter.exception.NotUniqueBeanDefinitionException;
-import com.codeus.winter.util.ClassUtils;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
@@ -398,7 +397,8 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
     }
 
     /**
-     * Finds all available bean candidates' names and definitions in the bean definitions that conform given target class.
+     * Finds all available bean candidates' names and definitions in the bean definitions that conform
+     * given target class.
      *
      * @param targetClass a class to find bean candidates for.
      * @return a list of bean candidates' names and definitions that are assignable from the given target class.
@@ -426,7 +426,8 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
      * @return bean instance that is assignable from the given descriptor,
      * {@code null} - if no candidates found for given descriptor.
      * @throws NotUniqueBeanDefinitionException if multiple candidates available for the given descriptor,
-     *                                          and it is not possible to determine the required one (missing qualifier metadata)
+     *                                          and it is not possible to determine
+     *                                          the required one (missing qualifier metadata)
      */
     @Nullable
     protected Object resolveBean(DependencyDescriptor descriptor) {
@@ -449,7 +450,8 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
                     }
                 }
             }
-            //TODO #35: there are multiple candidates, add logic to choose one based on @Primary or other util annotation.
+            //TODO #35: there are multiple candidates, add logic to choose one based
+            // on @Primary or other util annotation.
             String candidateClasses = candidates.stream()
                     .map(candidate -> candidate.getValue().getBeanClassName())
                     .sorted(Comparator.nullsLast(Comparator.naturalOrder()))
