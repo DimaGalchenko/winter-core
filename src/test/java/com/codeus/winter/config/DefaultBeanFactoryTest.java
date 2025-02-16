@@ -1,10 +1,25 @@
 package com.codeus.winter.config;
 
+import com.codeus.winter.config.impl.BeanDefinitionImpl;
 import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
 import com.codeus.winter.exception.BeanNotFoundException;
 import com.codeus.winter.exception.NotUniqueBeanDefinitionException;
-import com.codeus.winter.test.*;
+import com.codeus.winter.test.BeanA;
+import com.codeus.winter.test.BeanB;
+import com.codeus.winter.test.BeanC;
+import com.codeus.winter.test.BeanD;
+import com.codeus.winter.test.BeanE;
+import com.codeus.winter.test.BeanWithAnnotatedConstructor;
+import com.codeus.winter.test.BeanWithDependencyByInterface;
+import com.codeus.winter.test.BeanWithMultipleAutowiringConstructors;
+import com.codeus.winter.test.BeanWithMultipleNonAnnotatedAndDefaultConstructors;
+import com.codeus.winter.test.BeanWithNonAnnotatedAndDefaultConstructors;
+import com.codeus.winter.test.BeanWithNonAnnotatedConstructors;
+import com.codeus.winter.test.BeanWithPrivateConstructor;
+import com.codeus.winter.test.BeanWithSelfInjection;
+import com.codeus.winter.test.BeansWithCyclicDependency;
+import com.codeus.winter.test.Common;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,7 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -32,21 +50,21 @@ class DefaultBeanFactoryTest {
 
     @BeforeEach
     void setUpBeforeEach() {
-        when(beanDefinitionA.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanA");
+        when(beanDefinitionA.getBeanClassName()).thenReturn(BeanA.class.getName());
         when(beanDefinitionA.isSingleton()).thenReturn(true);
 
-        when(beanDefinitionB.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanB");
+        when(beanDefinitionB.getBeanClassName()).thenReturn(BeanB.class.getName());
         when(beanDefinitionB.isSingleton()).thenReturn(true);
         when(beanDefinitionB.getDependsOn()).thenReturn(new String[]{"BeanA"});
 
-        when(beanDefinitionC.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanC");
+        when(beanDefinitionC.getBeanClassName()).thenReturn(BeanC.class.getName());
         when(beanDefinitionC.isSingleton()).thenReturn(true);
         when(beanDefinitionC.getDependsOn()).thenReturn(new String[]{"BeanA", "BeanB"});
 
-        when(beanDefinitionD.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanD");
+        when(beanDefinitionD.getBeanClassName()).thenReturn(BeanD.class.getName());
         when(beanDefinitionD.isSingleton()).thenReturn(true);
 
-        when(beanDefinitionE.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanE");
+        when(beanDefinitionE.getBeanClassName()).thenReturn(BeanE.class.getName());
         when(beanDefinitionE.isSingleton()).thenReturn(true);
     }
 
@@ -144,15 +162,17 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
-    @DisplayName("Should initialize bean with dependencies using declared non-annotated constructor and ignore default one")
+    @DisplayName("Should initialize bean with dependencies using declared non-annotated constructor " +
+            "and ignoring default one")
     void testInitializeBeanWithDependenciesUsingDeclaredNonAnnotatedConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
+        BeanDefinition beanDefinition = beanDefinitionMock(BeanWithNonAnnotatedAndDefaultConstructors.class);
         factory.registerBeanDefinition("BeanA", beanDefinitionA);
-        factory.registerBeanDefinition("BeanWithNonAnnotatedAndDefaultConstructors", singletonBeanDefinitionMock(BeanWithNonAnnotatedAndDefaultConstructors.class));
+        factory.registerBeanDefinition("BeanWithNonAnnotatedAndDefaultConstructors", beanDefinition);
 
         factory.initializeBeans();
         BeanA beanA = factory.getBean(BeanA.class);
-        BeanWithNonAnnotatedAndDefaultConstructors beanB = factory.getBean(BeanWithNonAnnotatedAndDefaultConstructors.class);
+        var beanB = factory.getBean(BeanWithNonAnnotatedAndDefaultConstructors.class);
 
         assertNotNull(beanA);
         assertNotNull(beanB);
@@ -164,7 +184,8 @@ class DefaultBeanFactoryTest {
     @DisplayName("Should initialize bean with dependencies using declared annotated constructor")
     void testInitializeBeanWithDependenciesUsingDeclaredAnnotatedConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
-        factory.registerBeanDefinition("BeanWithAnnotatedConstructor", singletonBeanDefinitionMock(BeanWithAnnotatedConstructor.class));
+        BeanDefinition beanDefinition = beanDefinitionMock(BeanWithAnnotatedConstructor.class);
+        factory.registerBeanDefinition("BeanWithAnnotatedConstructor", beanDefinition);
         factory.registerBeanDefinition("BeanA", beanDefinitionA);
 
         factory.initializeBeans();
@@ -182,10 +203,10 @@ class DefaultBeanFactoryTest {
     void testInitializeBeanWithMultipleConstructorsUsingDefaultConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithMultipleNonAnnotatedAndDefaultConstructors",
-                singletonBeanDefinitionMock(BeanWithMultipleNonAnnotatedAndDefaultConstructors.class));
+                beanDefinitionMock(BeanWithMultipleNonAnnotatedAndDefaultConstructors.class));
 
         factory.initializeBeans();
-        BeanWithMultipleNonAnnotatedAndDefaultConstructors bean = factory.getBean(BeanWithMultipleNonAnnotatedAndDefaultConstructors.class);
+        var bean = factory.getBean(BeanWithMultipleNonAnnotatedAndDefaultConstructors.class);
 
         assertNotNull(bean);
         assertNotNull(bean.getBean());
@@ -197,11 +218,12 @@ class DefaultBeanFactoryTest {
     void testFailInitializeBeanWithMultipleAutowiringConstructors() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithMultipleAutowiringConstructors",
-                singletonBeanDefinitionMock(BeanWithMultipleAutowiringConstructors.class));
+                beanDefinitionMock(BeanWithMultipleAutowiringConstructors.class));
 
         assertThrows(BeanFactoryException.class, factory::initializeBeans,
-                "Cannot create bean for class com.codeus.winter.test.BeanWithMultipleAutowiringConstructors, " +
-                        "it has multiple constructors marked with autowire annotation");
+                "Cannot create bean for class %s, multiple constructors are marked with autowire annotation"
+                        .formatted(BeanWithMultipleAutowiringConstructors.class)
+        );
     }
 
     @Test
@@ -209,10 +231,10 @@ class DefaultBeanFactoryTest {
     void testFailInitializeBeanWithSinglePrivateDefaultConstructor() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithPrivateConstructor",
-                singletonBeanDefinitionMock(BeanWithPrivateConstructor.class));
+                beanDefinitionMock(BeanWithPrivateConstructor.class));
 
-        assertThrows(BeanFactoryException.class, factory::initializeBeans,
-                "Class has no public default constructor: com.codeus.winter.test.BeanWithPrivateConstructor");
+        assertThrows(BeanFactoryException.class, factory::initializeBeans, "Class has no public default constructor: %s"
+                .formatted(BeanWithPrivateConstructor.class.getName()));
     }
 
     @Test
@@ -220,17 +242,17 @@ class DefaultBeanFactoryTest {
     void testFailInitializeBeanWithMultipleNonAnnotatedConstructors() {
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanWithNonAnnotatedConstructors",
-                singletonBeanDefinitionMock(BeanWithNonAnnotatedConstructors.class));
+                beanDefinitionMock(BeanWithNonAnnotatedConstructors.class));
 
-        assertThrows(BeanFactoryException.class, factory::initializeBeans,
-                "Class has no public default constructor: com.codeus.winter.test.BeanWithNonAnnotatedConstructors");
+        assertThrows(BeanFactoryException.class, factory::initializeBeans, "Class has no public default constructor: %s"
+                .formatted(BeanWithNonAnnotatedConstructors.class.getName()));
     }
 
     @Test
     @DisplayName("Should autowire Bean dependency by interface type")
     void testInitializeBeansDependenciesByInterface() {
         BeanDefinition beanDefinition = mock(BeanDefinition.class);
-        when(beanDefinition.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanWithDependencyByInterface");
+        when(beanDefinition.getBeanClassName()).thenReturn(BeanWithDependencyByInterface.class.getName());
         when(beanDefinition.isSingleton()).thenReturn(true);
 
         Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
@@ -252,7 +274,7 @@ class DefaultBeanFactoryTest {
     @DisplayName("Should fail autowire Bean dependency by interface type when no candidates available")
     void testFailInitializeBeanWithDependencyByInterfaceIfNoCandidatesAvailable() {
         BeanDefinition beanDefinition = mock(BeanDefinition.class);
-        when(beanDefinition.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanWithDependencyByInterface");
+        when(beanDefinition.getBeanClassName()).thenReturn(BeanWithDependencyByInterface.class.getName());
         when(beanDefinition.isSingleton()).thenReturn(true);
 
         Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
@@ -267,11 +289,11 @@ class DefaultBeanFactoryTest {
     @DisplayName("Should fail initializing Beans with cyclic dependencies")
     void testThrowExceptionWhenBeanFactoryCantResolveCyclicDependencies() {
         BeanDefinition beanDefinitionOne = mock(BeanDefinition.class);
-        when(beanDefinitionOne.getBeanClassName()).thenReturn("com.codeus.winter.test.BeansWithCyclicDependency$BeanOne");
+        when(beanDefinitionOne.getBeanClassName()).thenReturn(BeansWithCyclicDependency.BeanOne.class.getName());
         when(beanDefinitionOne.isSingleton()).thenReturn(true);
 
         BeanDefinition beanDefinitionTwo = mock(BeanDefinition.class);
-        when(beanDefinitionTwo.getBeanClassName()).thenReturn("com.codeus.winter.test.BeansWithCyclicDependency$BeanTwo");
+        when(beanDefinitionTwo.getBeanClassName()).thenReturn(BeansWithCyclicDependency.BeanTwo.class.getName());
         when(beanDefinitionTwo.isSingleton()).thenReturn(true);
 
         Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
@@ -286,7 +308,7 @@ class DefaultBeanFactoryTest {
     @DisplayName("Should fail initializing Bean with self injection")
     void testFailOnSelfInjection() {
         BeanDefinition beanDefinition = mock(BeanDefinition.class);
-        when(beanDefinition.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanWithSelfInjection");
+        when(beanDefinition.getBeanClassName()).thenReturn(BeanWithSelfInjection.class.getName());
         when(beanDefinition.isSingleton()).thenReturn(true);
 
         Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
@@ -300,7 +322,7 @@ class DefaultBeanFactoryTest {
     @DisplayName("Should fail initializing Bean if multiple non-qualified candidates available for it dependency")
     void testFailInitializeBeanWithDependencyIfMultipleNonQualifiedCandidatesAvailable() {
         BeanDefinition beanDefinition = mock(BeanDefinition.class);
-        when(beanDefinition.getBeanClassName()).thenReturn("com.codeus.winter.test.BeanWithDependencyByInterface");
+        when(beanDefinition.getBeanClassName()).thenReturn(BeanWithDependencyByInterface.class.getName());
         when(beanDefinition.isSingleton()).thenReturn(true);
 
         Map<String, BeanDefinition> beanDefinitionMap = new LinkedHashMap<>();
@@ -309,9 +331,9 @@ class DefaultBeanFactoryTest {
         beanDefinitionMap.put("BeanE", beanDefinitionE);
         DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionMap);
 
-        NotUniqueBeanDefinitionException exception = assertThrows(NotUniqueBeanDefinitionException.class, factory::initializeBeans);
-        assertEquals("Cannot resolve bean for type='com.codeus.winter.test.Common', " +
-                "multiple beans are available: com.codeus.winter.test.BeanA, com.codeus.winter.test.BeanE", exception.getMessage());
+        assertThrows(NotUniqueBeanDefinitionException.class, factory::initializeBeans,
+                "Cannot resolve bean for type='%s', multiple beans are available: %s, %s"
+                        .formatted(Common.class, BeanA.class, BeanE.class));
     }
 
     @Test
@@ -443,61 +465,33 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
-    @DisplayName("Should create a prototype-scoped bean for given not-annotated class")
-    void testCreateBean() {
-        BeanFactory beanFactory = new DefaultBeanFactory();
+    @DisplayName("Should create bean")
+    void testCreateBean()
+            throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        BeanFactory beanFactory = new DefaultBeanFactory(new HashMap<>());
 
-        BeanA prototypeBean1 = beanFactory.createBean(BeanA.class);
-        BeanA prototypeBean2 = beanFactory.createBean(BeanA.class);
+        beanFactory.createBean(BeanA.class);
 
-        assertNotSame(prototypeBean1, prototypeBean2);
+        BeanA beanA = beanFactory.getBean(BeanA.class);
+        assertNotNull(beanA);
+        assertEquals(BeanA.class.getName(), beanA.getClass().getName());
     }
 
     @Test
-    @DisplayName("Should create a prototype-scoped bean with singleton dependencies for given not-annotated class")
-    void testCreateBeanWithSingletonDependencies() {
-        BeanFactory beanFactory = new DefaultBeanFactory();
-        beanFactory.registerBeanDefinition("BeanA", beanDefinitionA);
+    @DisplayName("Should create bean should throw exception when bean is not unique")
+    void testCreateBeanShouldThrowExceptionWhenBeanIsNotUnique() {
+        DefaultBeanFactory beanFactory = new DefaultBeanFactory(Map.of(
+                "BeanA", beanDefinitionA
+        ));
+        beanFactory.initializeBeans();
 
-        BeanB prototypeBean1 = beanFactory.createBean(BeanB.class);
-        BeanB prototypeBean2 = beanFactory.createBean(BeanB.class);
+        NotUniqueBeanDefinitionException exception = assertThrows(NotUniqueBeanDefinitionException.class,
+                () -> beanFactory.createBean(BeanA.class)
+        );
 
-        assertNotSame(prototypeBean1, prototypeBean2);
-        assertSame(prototypeBean1.getBeanA(), prototypeBean2.getBeanA());
-    }
-
-    @Test
-    @DisplayName("Should create a prototype-scoped bean with prototype dependencies for given not-annotated class")
-    void testCreateBeanWithPrototypeDependencies() {
-        BeanFactory beanFactory = new DefaultBeanFactory();
-        beanFactory.registerBeanDefinition("BeanA", prototypeBeanDefinitionMock(BeanA.class));
-
-        BeanB prototypeBean1 = beanFactory.createBean(BeanB.class);
-        BeanB prototypeBean2 = beanFactory.createBean(BeanB.class);
-
-        assertNotSame(prototypeBean1, prototypeBean2);
-        assertNotSame(prototypeBean1.getBeanA(), prototypeBean2.getBeanA());
-    }
-
-    @Test
-    @DisplayName("Should fail creating a prototype-scoped bean if cannot resolve one of the dependencies")
-    void testCreateBeanFailWhenCannotResolveDependencies() {
-        BeanFactory beanFactory = new DefaultBeanFactory();
-
-        assertThrows(BeanNotFoundException.class, () -> beanFactory.createBean(BeanB.class),
-                "Cannot resolve bean for type='%s', no bean definitions available".formatted(BeanA.class.getName()));
-    }
-
-    @Test
-    @DisplayName("Should not store a prototype-scoped bean for given not-annotated class")
-    void testCreateBeanShouldNotStorePrototypeBean() {
-        BeanFactory beanFactory = new DefaultBeanFactory();
-
-        BeanA prototypeBean = beanFactory.createBean(BeanA.class);
-
-        assertNotNull(prototypeBean);
-        assertThrows(BeanNotFoundException.class, () -> beanFactory.getBean(BeanA.class),
-                "Bean for type=%s not found".formatted(BeanA.class.getName()));
+        assertEquals(String.format("Bean with type '%s' already exists", BeanA.class.getName()),
+                exception.getMessage()
+        );
     }
 
     @Test
@@ -640,41 +634,18 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
-    @DisplayName("Should return null for bean definition with the unsupported scope")
+    @DisplayName("Should return null for bean definition with the PROTOTYPE scope")
     void testFailInitializeBeanWithPrototypeScope() {
         BeanDefinition beanDefinition = mock(BeanDefinition.class);
         when(beanDefinition.getBeanClassName()).thenReturn(BeanA.class.getName());
         when(beanDefinition.isSingleton()).thenReturn(false);
-        when(beanDefinition.isPrototype()).thenReturn(false);
-        when(beanDefinition.getScope()).thenReturn("MY_CUSTOM_SCOPE");
 
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanA", beanDefinition);
 
         assertThrows(IllegalArgumentException.class, factory::initializeBeans,
-                "DefaultBeanFactory cannot create bean (name='BeanA') with the 'MY_CUSTOM_SCOPE' scope.");
+                "DefaultBeanFactory cannot create bean (name='BeanA') with the PROTOTYPE scope.");
 
-    }
-
-    @Test
-    @DisplayName("Should initialize a bean with multiple candidates using @Qualifier annotation")
-    void testShouldInitializeBeanWithMultipleCandidatesUsingQualifier() {
-        BeanDefinition beanDefinitionWithQualifierAnnotation = singletonBeanDefinitionMock(BeanWithQualifierAnnotation.class);
-        beanDefinitionWithQualifierAnnotation.setBeanClassName("com.codeus.winter.test.BeanWithQualifierAnnotation");
-        HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
-        beanDefinitionHashMap.put("BeanA", beanDefinitionA);
-        beanDefinitionHashMap.put("BeanE", beanDefinitionE);
-        beanDefinitionHashMap.put("BeanWithQualifier", beanDefinitionWithQualifierAnnotation);
-
-        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionHashMap);
-        factory.initializeBeans();
-
-        assertNotNull(factory.getBean(BeanWithQualifierAnnotation.class));
-        BeanWithQualifierAnnotation bwqa = factory.getBean(
-                "BeanWithQualifier",
-                BeanWithQualifierAnnotation.class
-        );
-        assertNotNull(bwqa.getCommon());
     }
 
     @Test

@@ -1,11 +1,12 @@
 package com.codeus.winter.config;
 
-import com.codeus.winter.annotation.Autowired;
 import com.codeus.winter.annotation.QualifierAnnotationAutowireCandidateResolver;
+import com.codeus.winter.config.impl.BeanDefinitionImpl;
 import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
 import com.codeus.winter.exception.BeanNotFoundException;
 import com.codeus.winter.exception.NotUniqueBeanDefinitionException;
+import com.codeus.winter.util.ClassUtils;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
@@ -13,7 +14,14 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -21,7 +29,7 @@ import java.util.stream.Stream;
 /**
  * Default implementation of the {@link BeanFactory} interface.
  */
-public class DefaultBeanFactory extends AutowireCapableBeanFactory {
+public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
 
     private final Map<String, Object> singletonBeans = new HashMap<>();
     private final Map<String, BeanDefinition> beanDefinitions;
@@ -30,16 +38,15 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     private final QualifierAnnotationAutowireCandidateResolver qualifierAnnotationAutowireCandidateResolver =
             new QualifierAnnotationAutowireCandidateResolver();
 
-    private final ConstructorResolver constructorResolver;
 
     public DefaultBeanFactory() {
         this(new HashMap<>());
     }
 
     public DefaultBeanFactory(Map<String, BeanDefinition> beanDefinitions) {
-        //TODO: should we make a copy, so it won't be possible to modify beanDefinitions from outside?
+        super();
+        //TODO should we make a copy, so it won't be possible to modify beanDefinitions from outside?
         this.beanDefinitions = beanDefinitions;
-        this.constructorResolver = new ConstructorResolver(this);
     }
 
     /**
@@ -104,25 +111,35 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      */
     @Override
     public final <T> T getBean(@Nonnull final Class<T> requiredType) throws BeanNotFoundException {
-        DependencyDescriptor descriptor = new DependencyDescriptor(requiredType);
-        Object bean = resolveBean(descriptor);
-        if (bean == null)
+        Object bean = resolveBean(requiredType);
+        if (bean == null) {
             throw new BeanNotFoundException("Bean for type=%s not found".formatted(requiredType.getName()));
+        }
 
         return requiredType.cast(bean);
     }
 
     /**
-     * Creates a prototype-scoped bean for the specified bean class.
+     * Creates bean object with class type.
      *
      * @param beanClass specified bean class.
      * @return bean object if its not possible throw exception.
      */
     @Override
-    public final <T> T createBean(@Nonnull final Class<T> beanClass) {
-        BeanDefinition beanDefinition = BeanDefinitionFactory.prototypeBeanDefinition(beanClass);
-        Object newBean = createBean(beanClass.getName(), beanDefinition);
+    //TODO (other ticket scope): this should be adjusted to create beans with PROTOTYPE scope
+    public final <T> T createBean(@Nonnull final Class<T> beanClass)
+            throws NotUniqueBeanDefinitionException, InvocationTargetException, InstantiationException,
+            IllegalAccessException, NoSuchMethodException {
+        checkBeanClassUniqueness(beanClass);
 
+        //TODO handle direct BeanDefinitionImpl instantiation, add some factory method
+        BeanDefinitionImpl beanDefinition = new BeanDefinitionImpl();
+        beanDefinition.setBeanClassName(beanClass.getName());
+        beanDefinition.setScope(BeanDefinition.SCOPE_SINGLETON);
+
+        Object newBean = beanClass.getDeclaredConstructor().newInstance();
+        singletonBeans.put(newBean.getClass().getName(), newBean);
+        beanDefinitions.put(newBean.getClass().getName(), beanDefinition);
         return beanClass.cast(newBean);
     }
 
@@ -151,6 +168,13 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     @Override
     public final void addBeanPostProcessor(@Nonnull final BeanPostProcessor postProcessor) {
         postProcessors.add(postProcessor);
+    }
+
+    private <T> void checkBeanClassUniqueness(@Nonnull final Class<T> beanClass) {
+        if (singletonBeans.values().stream().anyMatch(beanClass::isInstance)) {
+            throw new NotUniqueBeanDefinitionException(
+                    String.format("Bean with type '%s' already exists", beanClass.getName()));
+        }
     }
 
     /**
@@ -184,17 +208,15 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      * @param beanName       a name of a bean to retrieve.
      * @param beanDefinition a definition of a bean to retrieve.
      * @return a bean instance.
-     * @throws IllegalArgumentException if given beanDefinition has unsupported scope.
+     * @throws IllegalArgumentException if given beanDefinition has {@link Scope#PROTOTYPE} scope.
      */
     private Object getBean(String beanName, BeanDefinition beanDefinition) {
         if (beanDefinition.isSingleton()) {
             return getSingleton(beanName, beanDefinition);
-        } else if (beanDefinition.isPrototype()) {
-            return createBean(beanName, beanDefinition);
         } else {
+            // place for PROTOTYPE scope logic
             throw new IllegalArgumentException(
-                    "DefaultBeanFactory cannot create the bean (name='%s') with the scope='%s'."
-                            .formatted(beanName, beanDefinition.getScope()));
+                    "DefaultBeanFactory cannot create bean (name='%s') with the PROTOTYPE scope.".formatted(beanName));
         }
     }
 
@@ -209,8 +231,9 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     private Object getSingleton(String beanName, BeanDefinition beanDefinition) {
         Object singleton = singletonBeans.get(beanName);
 
-        if (singleton != null) return singleton;
-        else {
+        if (singleton != null) {
+            return singleton;
+        } else {
             beforeSingletonCreation(beanName);
             Object beanInstance = createBean(beanName, beanDefinition);
             afterSingletonCreation(beanName);
@@ -227,7 +250,8 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      *
      * @param beanName a name of a bean to register.
      * @throws BeanCurrentlyInCreationException if the same bean name passed twice
-     *                                          without calling {@link DefaultBeanFactory#afterSingletonCreation} for it in between.
+     *                                          without calling {@link DefaultBeanFactory#afterSingletonCreation}
+     *                                          for it in between.
      */
     private void beforeSingletonCreation(String beanName) {
         if (!singletonsCurrentlyInCreation.add(beanName)) {
@@ -261,57 +285,16 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         Object beanInstance;
         Constructor<?> autowiringConstructor = findAutowiringConstructor(beanName, beanDefinition);
 
-        if (autowiringConstructor != null)
-            beanInstance = constructorResolver.autowireConstructor(autowiringConstructor);
-        else
+        if (autowiringConstructor != null) {
+            beanInstance = autowireConstructor(autowiringConstructor);
+        } else {
             beanInstance = instantiateBean(beanName, beanDefinition);
+        }
 
         beanInstance = applyPostProcessorsBeforeInitialization(beanInstance, beanName);
         beanInstance = applyPostProcessorsAfterInitialization(beanInstance, beanName);
 
         return beanInstance;
-    }
-
-    /**
-     * Searches for a public constructor for a given bean's name and definition that can be used for autowiring the bean.
-     * The found constructor is never a default constructor (constructor without arguments).
-     *
-     * @param beanName       a name of a bean to resolve autowiring constructor for.
-     * @param beanDefinition a definition of a bean to resolve autowiring constructor for.
-     * @return a public constructor ready for autowiring, null - otherwise.
-     * @throws RuntimeException if Bean class has two or more constructors marked with the {@link Autowired} annotation.
-     */
-    @Nullable
-    private Constructor<?> findAutowiringConstructor(String beanName,
-                                                     BeanDefinition beanDefinition) {
-        String className = retrieveBeanClassName(beanDefinition, beanName);
-        Class<?> beanClass = resolveClass(className, beanName);
-        Constructor<?>[] constructors = beanClass.getConstructors();
-
-        List<Constructor<?>> candidates = new ArrayList<>();
-        Constructor<?> explicitAutowiringConstructor = null;
-        boolean hasExplicitDefaultConstructor = false;
-        for (Constructor<?> constructor : constructors) {
-            if (hasAutowiredAnnotation(constructor)) {
-                if (explicitAutowiringConstructor != null)
-                    throw new BeanFactoryException(("Cannot create bean for class %s, " +
-                            "it has multiple constructors marked with autowire annotation").formatted(beanClass));
-
-                explicitAutowiringConstructor = constructor;
-            }
-
-            if (constructor.getParameterCount() == 0) hasExplicitDefaultConstructor = true;
-
-            candidates.add(constructor);
-        }
-
-        if (explicitAutowiringConstructor != null)
-            return explicitAutowiringConstructor;
-        else if (candidates.size() == 1 && !hasExplicitDefaultConstructor)
-            return candidates.getFirst();
-        else if (candidates.size() == 2 && hasExplicitDefaultConstructor)
-            return candidates.stream().filter(constructor -> constructor.getParameterCount() > 0).findAny().orElse(null);
-        else return null;
     }
 
     /**
@@ -325,7 +308,7 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      */
     private Object instantiateBean(String beanName, BeanDefinition beanDefinition) {
         String className = retrieveBeanClassName(beanDefinition, beanName);
-        Class<?> beanClass = resolveClass(className, beanName);
+        Class<?> beanClass = ClassUtils.resolveClass(className);
 
         try {
             return beanClass.getConstructor().newInstance();
@@ -344,7 +327,6 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      * @param descriptor a dependency descriptor to resolve a bean.
      * @return bean instance that conform the given {@link DependencyDescriptor}.
      */
-    @SuppressWarnings("IfCanBeSwitch")
     @Override
     protected Object resolveDependency(DependencyDescriptor descriptor) {
         Object dependency;
@@ -381,8 +363,10 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
         List<Object> dependencies = new ArrayList<>();
 
         List<Map.Entry<String, BeanDefinition>> candidates = findCandidates(dependencyClass);
-        if (candidates.isEmpty()) throw new BeanNotFoundException(
-                "Cannot resolve bean for type='%s', no bean definitions available".formatted(dependencyClass.getName()));
+        if (candidates.isEmpty()) {
+            throw new BeanNotFoundException(
+                "Cannot resolve bean for type='%s', no bean definition available".formatted(dependencyClass.getName()));
+        }
 
         for (Map.Entry<String, BeanDefinition> candidate : candidates) {
             String beanName = candidate.getKey();
@@ -401,16 +385,19 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      * @return a bean instance.
      */
     protected Object resolveSingleDependency(DependencyDescriptor descriptor) {
-        Object resolvedBean = resolveBean(descriptor);
-        if (resolvedBean == null) throw new BeanNotFoundException(
-                "Cannot resolve bean for type='%s', no bean definitions available"
-                        .formatted(descriptor.getDependencyClass().getName()));
+        Class<?> dependencyClass = descriptor.getDependencyClass();
+        Object resolvedBean = resolveBean(dependencyClass);
+        if (resolvedBean == null) {
+            throw new BeanNotFoundException(
+                "Cannot resolve bean for type='%s', no bean definition available".formatted(dependencyClass.getName()));
+        }
 
         return resolvedBean;
     }
 
     /**
-     * Finds all available bean candidates' names and definitions in the bean definitions that conform given target class.
+     * Finds all available bean candidates' names and definitions in the bean definitions that conform
+     * given target class.
      *
      * @param targetClass a class to find bean candidates for.
      * @return a list of bean candidates' names and definitions that are assignable from the given target class.
@@ -419,50 +406,48 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     protected List<Map.Entry<String, BeanDefinition>> findCandidates(Class<?> targetClass) {
         List<Map.Entry<String, BeanDefinition>> candidates = new ArrayList<>();
         for (Map.Entry<String, BeanDefinition> definitionEntry : beanDefinitions.entrySet()) {
-            String beanName = definitionEntry.getKey();
             BeanDefinition candidateDefinition = definitionEntry.getValue();
-            Class<?> candidateClass = resolveClass(candidateDefinition.getBeanClassName(), beanName);
+            Class<?> candidateClass = ClassUtils.resolveClass(candidateDefinition.getBeanClassName());
 
-            if (targetClass.isAssignableFrom(candidateClass)) candidates.add(definitionEntry);
+            if (targetClass.isAssignableFrom(candidateClass)) {
+                candidates.add(definitionEntry);
+            }
         }
 
         return candidates;
     }
 
     /**
-     * Resolves bean instance for given descriptor. Handles multiple candidates using qualifier annotations.
+     * Resolves bean instance for given class. Handles multiple candidates using qualifier annotations.
      *
-     * @param descriptor a dependency descriptor class.
-     * @return bean instance that is assignable from the given descriptor,
-     * {@code null} - if no candidates found for given descriptor.
-     * @throws NotUniqueBeanDefinitionException if multiple candidates available for the given descriptor,
-     *                                          and it is not possible to determine the required one (missing qualifier metadata)
+     * @param beanClass a bean class to resolve for.
+     * @return bean instance that is assignable from the given class,
+     * {@code null} - if no candidates found for given class.
+     * @throws NotUniqueBeanDefinitionException if multiple candidates available for the given class,
+     *                                          and it is not possible to determine the required one
+     *                                          (missing qualifier metadata)
      */
     @Nullable
-    protected Object resolveBean(DependencyDescriptor descriptor) {
-        Class<?> beanClass = descriptor.getDependencyClass();
+    protected Object resolveBean(Class<?> beanClass) {
         List<Map.Entry<String, BeanDefinition>> candidates = findCandidates(beanClass);
 
-        if (candidates.isEmpty()) return null;
+        if (candidates.isEmpty()) {
+            return null;
+        }
 
         Map.Entry<String, BeanDefinition> targetCandidate;
         if (candidates.size() == 1) {
             targetCandidate = candidates.getFirst();
         } else {
-            String suggestedName = qualifierAnnotationAutowireCandidateResolver.getSuggestedName(descriptor);
-            if (suggestedName != null) {
-                for (Map.Entry<String, BeanDefinition> candidate : candidates) {
-                    if (candidate.getKey().equals(suggestedName)) {
-                        return getBean(candidate.getKey(), candidate.getValue());
-                    }
-                }
-            }
-            //TODO #35: there are multiple candidates, add logic to choose one based on @Primary or other util annotation.
+            //TODO #35, #46: there are multiple candidates,
+            // add logic to choose one based on @Primary, @Qualifier or other util annotation.
             String candidateClasses = candidates.stream()
                     .map(candidate -> candidate.getValue().getBeanClassName())
                     .sorted(Comparator.nullsLast(Comparator.naturalOrder()))
                     .collect(Collectors.joining(", "));
-            throw new NotUniqueBeanDefinitionException("Cannot resolve bean for type='%s', multiple beans are available: %s".formatted(beanClass.getName(), candidateClasses));
+            throw new NotUniqueBeanDefinitionException(
+                    "Cannot resolve bean for type='%s', multiple beans are available: %s"
+                            .formatted(beanClass.getName(), candidateClasses));
         }
 
         return getBean(targetCandidate.getKey(), targetCandidate.getValue());
@@ -487,16 +472,11 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     private Object applyPostProcessor(BiFunction<Object, String, Object> postProcessorFunction,
                                       Object bean,
                                       String beanName) {
-        Object result = postProcessorFunction.apply(bean, beanName);
-        if (result == null) {
-            throw new BeanFactoryException(String.format(
-                    "PostProcessor returned null for bean: %s during post processing", beanName));
-        }
-        return result;
+        return Optional.ofNullable(postProcessorFunction.apply(bean, beanName))
+                .orElseThrow(() -> new BeanFactoryException(String.format(
+                        "PostProcessor returned null for bean: %s during post processing", beanName)));
     }
 
-
-    // UTILS //TODO: consider distributing to separate classes
 
     /**
      * Convenient method to retrieve {@link BeanDefinition} by name and throw exception if missing.
@@ -507,52 +487,10 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      */
     private BeanDefinition getBeanDefinition(String name) {
         BeanDefinition beanDefinition = beanDefinitions.get(name);
-        if (beanDefinition == null) throw new BeanNotFoundException("Bean for name='%s' not found".formatted(name));
+        if (beanDefinition == null) {
+            throw new BeanNotFoundException("Bean for name='%s' not found".formatted(name));
+        }
 
         return beanDefinition;
-    }
-
-    /**
-     * Checks if given constructor is marked with the {@link Autowired} annotation.
-     *
-     * @param constructor a constructor to check.
-     * @return {@code true} - if a constructor is marked with the {@link Autowired} annotation,
-     * {@code false} - otherwise.
-     */
-    private boolean hasAutowiredAnnotation(Constructor<?> constructor) {
-        return constructor.getAnnotation(Autowired.class) != null;
-    }
-
-    /**
-     * Safely retrieves bean class name from given bean definition.
-     *
-     * @param beanDefinition a definition from which to retrieve.
-     * @param beanName       a name of a bean.
-     * @return a bean class name.
-     * @throws BeanFactoryException if bean class name is @{code null} in given bean definition.
-     */
-    //Can be moved to BeanDefinition but requires interface/class adjustment
-    private static String retrieveBeanClassName(BeanDefinition beanDefinition, String beanName) {
-        return Optional.ofNullable(beanDefinition.getBeanClassName())
-                .orElseThrow(() -> new BeanFactoryException("Bean class name is not set for bean: " + beanName));
-    }
-
-
-    /**
-     * Resolves class type for given class name.
-     *
-     * @param className a name of a class to resolve.
-     * @param beanName  a bean name of a class to resolve.
-     * @return class type for given class name.
-     * @throws BeanFactoryException if class type cannot be found by the given class name.
-     */
-    private static Class<?> resolveClass(String className, String beanName) {
-        Class<?> beanClass;
-        try {
-            beanClass = Class.forName(className);
-        } catch (ClassNotFoundException e) {
-            throw new BeanFactoryException("Class not found by name='%s' for bean='%s': ".formatted(className, beanName), e);
-        }
-        return beanClass;
     }
 }
