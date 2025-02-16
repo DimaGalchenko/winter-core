@@ -50,6 +50,7 @@ class PackageBeanRegistrationTest {
         when(packageScanner.findClassesWithAnnotations(anyString(), anySet()))
                 .thenReturn(Set.of(testClass));
         when(registry.containsBeanDefinition("winterComponent")).thenReturn(false);
+
         beanRegistration.registerBeans("com.framework");
 
         verify(registry).registerBeanDefinition(eq("winterComponent"), any(BeanDefinitionImpl.class));
