@@ -24,7 +24,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,6 +32,8 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -466,33 +467,61 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
-    @DisplayName("Should create bean")
-    void testCreateBean()
-            throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
-        BeanFactory beanFactory = new DefaultBeanFactory(new HashMap<>());
+    @DisplayName("Should create a prototype-scoped bean for given not-annotated class")
+    void testCreateBean() {
+        BeanFactory beanFactory = new DefaultBeanFactory();
 
-        beanFactory.createBean(BeanA.class);
+        BeanA prototypeBean1 = beanFactory.createBean(BeanA.class);
+        BeanA prototypeBean2 = beanFactory.createBean(BeanA.class);
 
-        BeanA beanA = beanFactory.getBean(BeanA.class);
-        assertNotNull(beanA);
-        assertEquals(BeanA.class.getName(), beanA.getClass().getName());
+        assertNotSame(prototypeBean1, prototypeBean2);
     }
 
     @Test
-    @DisplayName("Should create bean should throw exception when bean is not unique")
-    void testCreateBeanShouldThrowExceptionWhenBeanIsNotUnique() {
-        DefaultBeanFactory beanFactory = new DefaultBeanFactory(Map.of(
-                "BeanA", beanDefinitionA
-        ));
-        beanFactory.initializeBeans();
+    @DisplayName("Should create a prototype-scoped bean with singleton dependencies for given not-annotated class")
+    void testCreateBeanWithSingletonDependencies() {
+        BeanFactory beanFactory = new DefaultBeanFactory();
+        beanFactory.registerBeanDefinition("BeanA", beanDefinitionA);
 
-        NotUniqueBeanDefinitionException exception = assertThrows(NotUniqueBeanDefinitionException.class,
-                () -> beanFactory.createBean(BeanA.class)
-        );
+        BeanB prototypeBean1 = beanFactory.createBean(BeanB.class);
+        BeanB prototypeBean2 = beanFactory.createBean(BeanB.class);
 
-        assertEquals(String.format("Bean with type '%s' already exists", BeanA.class.getName()),
-                exception.getMessage()
-        );
+        assertNotSame(prototypeBean1, prototypeBean2);
+        assertSame(prototypeBean1.getBeanA(), prototypeBean2.getBeanA());
+    }
+
+    @Test
+    @DisplayName("Should create a prototype-scoped bean with prototype dependencies for given not-annotated class")
+    void testCreateBeanWithPrototypeDependencies() {
+        BeanFactory beanFactory = new DefaultBeanFactory();
+        beanFactory.registerBeanDefinition("BeanA", prototypeBeanDefinitionMock(BeanA.class));
+
+        BeanB prototypeBean1 = beanFactory.createBean(BeanB.class);
+        BeanB prototypeBean2 = beanFactory.createBean(BeanB.class);
+
+        assertNotSame(prototypeBean1, prototypeBean2);
+        assertNotSame(prototypeBean1.getBeanA(), prototypeBean2.getBeanA());
+    }
+
+    @Test
+    @DisplayName("Should fail creating a prototype-scoped bean if cannot resolve one of the dependencies")
+    void testCreateBeanFailWhenCannotResolveDependencies() {
+        BeanFactory beanFactory = new DefaultBeanFactory();
+
+        assertThrows(BeanNotFoundException.class, () -> beanFactory.createBean(BeanB.class),
+                "Cannot resolve bean for type='%s', no bean definitions available".formatted(BeanA.class.getName()));
+    }
+
+    @Test
+    @DisplayName("Should not store a prototype-scoped bean for given not-annotated class")
+    void testCreateBeanShouldNotStorePrototypeBean() {
+        BeanFactory beanFactory = new DefaultBeanFactory();
+
+        BeanA prototypeBean = beanFactory.createBean(BeanA.class);
+
+        assertNotNull(prototypeBean);
+        assertThrows(BeanNotFoundException.class, () -> beanFactory.getBean(BeanA.class),
+                "Bean for type=%s not found".formatted(BeanA.class.getName()));
     }
 
     @Test
@@ -635,11 +664,13 @@ class DefaultBeanFactoryTest {
     }
 
     @Test
-    @DisplayName("Should return null for bean definition with the PROTOTYPE scope")
+    @DisplayName("Should return null for bean definition with the unsupported scope")
     void testFailInitializeBeanWithPrototypeScope() {
         BeanDefinition beanDefinition = mock(BeanDefinition.class);
         when(beanDefinition.getBeanClassName()).thenReturn(BeanA.class.getName());
         when(beanDefinition.isSingleton()).thenReturn(false);
+        when(beanDefinition.isPrototype()).thenReturn(false);
+        when(beanDefinition.getScope()).thenReturn("MY_CUSTOM_SCOPE");
 
         DefaultBeanFactory factory = new DefaultBeanFactory();
         factory.registerBeanDefinition("BeanA", beanDefinition);
@@ -647,29 +678,6 @@ class DefaultBeanFactoryTest {
         assertThrows(IllegalArgumentException.class, factory::initializeBeans,
                 "DefaultBeanFactory cannot create bean (name='BeanA') with the 'MY_CUSTOM_SCOPE' scope.");
 
-    }
-
-    @Test
-    @DisplayName("Should initialize a bean with multiple candidates using @Qualifier annotation")
-    void testShouldInitializeBeanWithMultipleCandidatesUsingQualifier() {
-        BeanDefinition beanDefinitionWithQualifierAnnotation = singletonBeanDefinitionMock(
-                BeanWithQualifierAnnotation.class
-        );
-        beanDefinitionWithQualifierAnnotation.setBeanClassName("com.codeus.winter.test.BeanWithQualifierAnnotation");
-        HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
-        beanDefinitionHashMap.put("BeanA", beanDefinitionA);
-        beanDefinitionHashMap.put("BeanE", beanDefinitionE);
-        beanDefinitionHashMap.put("BeanWithQualifier", beanDefinitionWithQualifierAnnotation);
-
-        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionHashMap);
-        factory.initializeBeans();
-
-        assertNotNull(factory.getBean(BeanWithQualifierAnnotation.class));
-        BeanWithQualifierAnnotation bwqa = factory.getBean(
-                "BeanWithQualifier",
-                BeanWithQualifierAnnotation.class
-        );
-        assertNotNull(bwqa.getCommon());
     }
 
     @Test
@@ -698,6 +706,29 @@ class DefaultBeanFactoryTest {
                 () -> beanFactory.registerBeanDefinition(beanDefinitionName, beanDefinition)
         );
 
+    }
+
+    @Test
+    @DisplayName("Should initialize a bean with multiple candidates using @Qualifier annotation")
+    void testShouldInitializeBeanWithMultipleCandidatesUsingQualifier() {
+        BeanDefinition beanDefinitionWithQualifierAnnotation = singletonBeanDefinitionMock(
+                BeanWithQualifierAnnotation.class
+        );
+        beanDefinitionWithQualifierAnnotation.setBeanClassName("com.codeus.winter.test.BeanWithQualifierAnnotation");
+        HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
+        beanDefinitionHashMap.put("BeanA", beanDefinitionA);
+        beanDefinitionHashMap.put("BeanE", beanDefinitionE);
+        beanDefinitionHashMap.put("BeanWithQualifier", beanDefinitionWithQualifierAnnotation);
+
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionHashMap);
+        factory.initializeBeans();
+
+        assertNotNull(factory.getBean(BeanWithQualifierAnnotation.class));
+        BeanWithQualifierAnnotation bwqa = factory.getBean(
+                "BeanWithQualifier",
+                BeanWithQualifierAnnotation.class
+        );
+        assertNotNull(bwqa.getCommon());
     }
 
     static BeanDefinition singletonBeanDefinitionMock(Class<?> beanClass) {
