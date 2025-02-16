@@ -1,6 +1,5 @@
 package com.codeus.winter.config;
 
-import com.codeus.winter.config.impl.BeanDefinitionImpl;
 import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
 import com.codeus.winter.exception.BeanNotFoundException;
@@ -660,7 +659,7 @@ class DefaultBeanFactoryTest {
     @Test
     @DisplayName("Should initialize a bean with multiple candidates using @Qualifier annotation")
     void testShouldInitializeBeanWithMultipleCandidatesUsingQualifier() {
-        BeanDefinition beanDefinitionWithQualifierAnnotation = new BeanDefinitionImpl();
+        BeanDefinition beanDefinitionWithQualifierAnnotation = singletonBeanDefinitionMock(BeanWithQualifierAnnotation.class);
         beanDefinitionWithQualifierAnnotation.setBeanClassName("com.codeus.winter.test.BeanWithQualifierAnnotation");
         HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
         beanDefinitionHashMap.put("BeanA", beanDefinitionA);
@@ -671,6 +670,11 @@ class DefaultBeanFactoryTest {
         factory.initializeBeans();
 
         assertNotNull(factory.getBean(BeanWithQualifierAnnotation.class));
+        BeanWithQualifierAnnotation bwqa = factory.getBean(
+                "BeanWithQualifier",
+                BeanWithQualifierAnnotation.class
+        );
+        assertNotNull(bwqa.getCommon());
     }
 
     @Test
@@ -679,7 +683,7 @@ class DefaultBeanFactoryTest {
         Map<String, BeanDefinition> beanDefinitionMap = spy(new HashMap<>());
         BeanFactory beanFactory = new DefaultBeanFactory(beanDefinitionMap);
         String beanDefinitionName = "BeanDefinition";
-        BeanDefinition beanDefinition = new BeanDefinitionImpl();
+        BeanDefinition beanDefinition = singletonBeanDefinitionMock(BeanA.class);
 
         beanFactory.registerBeanDefinition(beanDefinitionName, beanDefinition);
 
@@ -691,7 +695,7 @@ class DefaultBeanFactoryTest {
     void testShouldThrowExceptionWhenRegisterBeanDefinitionWithSameName() {
         BeanFactory beanFactory = new DefaultBeanFactory();
         String beanDefinitionName = "BeanDefinition";
-        BeanDefinition beanDefinition = new BeanDefinitionImpl();
+        BeanDefinition beanDefinition = singletonBeanDefinitionMock(BeanA.class);
 
         beanFactory.registerBeanDefinition(beanDefinitionName, beanDefinition);
         assertThrows(

@@ -3,8 +3,11 @@ package com.codeus.winter.util;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
-public class AnnotationUtils {
+public final class AnnotationUtils {
     private static final String VALUE = "value";
+
+    private AnnotationUtils() {
+    }
 
     /**
      * Retrieve the 'value' of the {@code value} attribute of a

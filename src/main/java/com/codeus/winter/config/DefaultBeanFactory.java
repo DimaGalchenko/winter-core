@@ -2,7 +2,6 @@ package com.codeus.winter.config;
 
 import com.codeus.winter.annotation.Autowired;
 import com.codeus.winter.annotation.QualifierAnnotationAutowireCandidateResolver;
-import com.codeus.winter.config.impl.BeanDefinitionImpl;
 import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
 import com.codeus.winter.exception.BeanNotFoundException;
@@ -107,7 +106,8 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     public final <T> T getBean(@Nonnull final Class<T> requiredType) throws BeanNotFoundException {
         DependencyDescriptor descriptor = new DependencyDescriptor(requiredType);
         Object bean = resolveBean(descriptor);
-        if (bean == null) throw new BeanNotFoundException("Bean for type=%s not found".formatted(requiredType.getName()));
+        if (bean == null)
+            throw new BeanNotFoundException("Bean for type=%s not found".formatted(requiredType.getName()));
 
         return requiredType.cast(bean);
     }
@@ -401,10 +401,10 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
      * @return a bean instance.
      */
     protected Object resolveSingleDependency(DependencyDescriptor descriptor) {
-        Class<?> dependencyClass = descriptor.getDependencyClass();
         Object resolvedBean = resolveBean(descriptor);
         if (resolvedBean == null) throw new BeanNotFoundException(
-                "Cannot resolve bean for type='%s', no bean definitions available".formatted(dependencyClass.getName()));
+                "Cannot resolve bean for type='%s', no bean definitions available"
+                        .formatted(descriptor.getDependencyClass().getName()));
 
         return resolvedBean;
     }
@@ -430,12 +430,12 @@ public class DefaultBeanFactory extends AutowireCapableBeanFactory {
     }
 
     /**
-     * Resolves bean instance for given class. Handles multiple candidates using qualifier annotations.
+     * Resolves bean instance for given descriptor. Handles multiple candidates using qualifier annotations.
      *
      * @param descriptor a dependency descriptor class.
-     * @return bean instance that is assignable from the given class,
-     * {@code null} - if no candidates found for given class.
-     * @throws NotUniqueBeanDefinitionException if multiple candidates available for the given class,
+     * @return bean instance that is assignable from the given descriptor,
+     * {@code null} - if no candidates found for given descriptor.
+     * @throws NotUniqueBeanDefinitionException if multiple candidates available for the given descriptor,
      *                                          and it is not possible to determine the required one (missing qualifier metadata)
      */
     @Nullable

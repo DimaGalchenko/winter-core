@@ -59,15 +59,22 @@ public class DependencyDescriptor {
     }
 
     public Annotation[] getAnnotations() {
-        return annotations;
+        Annotation[] annotationCopy = new Annotation[annotations.length];
+        System.arraycopy(annotations, 0, annotationCopy, 0, annotations.length);
+        return annotationCopy;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         DependencyDescriptor that = (DependencyDescriptor) o;
-        return Objects.equals(dependencyName, that.dependencyName) && Objects.equals(dependencyType, that.dependencyType);
+        return Objects.equals(dependencyName, that.dependencyName)
+                && Objects.equals(dependencyType, that.dependencyType);
     }
 
     @Override
