@@ -23,8 +23,6 @@ dependencies {
     // Reflection
     implementation "org.reflections:reflections:${versions.reflections}"
 
-    implementation 'org.springframework:spring-context:6.2.0'
-
     // Apache Commons
     implementation "org.apache.commons:commons-lang3:${versions.commons_lang}"
     implementation "org.apache.commons:commons-collections4:${versions.commons_collections}"
