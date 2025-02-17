@@ -4,10 +4,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class BeanD {
-    private List<Common> list;
-    private Set<Common> set;
-    private Map<String, Common> map;
+    private final List<Common> list;
+    private final Set<Common> set;
+    private final Map<String, Common> map;
 
     public BeanD(List<Common> list, Set<Common> set, Map<String, Common> map) {
         this.list = list;

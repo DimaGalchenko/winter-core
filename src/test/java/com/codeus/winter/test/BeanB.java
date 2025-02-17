@@ -1,5 +1,6 @@
 package com.codeus.winter.test;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class BeanB {
     private final BeanA beanA;
 
