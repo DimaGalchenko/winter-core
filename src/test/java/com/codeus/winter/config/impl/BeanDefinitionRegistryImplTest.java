@@ -1,11 +1,5 @@
 package com.codeus.winter.config.impl;
 
-import com.codeus.winter.config.BeanDefinition;
-import com.codeus.winter.exception.BeanDefinitionStoreException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -15,6 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import com.codeus.winter.config.BeanDefinition;
+import com.codeus.winter.exception.BeanDefinitionStoreException;
+import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 class BeanDefinitionRegistryImplTest {
     private BeanDefinitionRegistryImpl registry;
@@ -143,6 +144,22 @@ class BeanDefinitionRegistryImplTest {
 
         assertEquals(2, registry.getBeanDefinitionCount(),
                 "Registry should contain 2 BeanDefinitions");
+    }
+
+    @Test
+    @DisplayName("Should get a BeanDefinitions map successfully")
+    void testGetBeanDefinitionsMap() {
+        BeanDefinition mockBeanDefinitionFirst = mock(BeanDefinition.class);
+        BeanDefinition mockBeanDefinitionSecond = mock(BeanDefinition.class);
+        String firstBeanName = "testBeanFirst";
+        String secondBeanName = "testBeanSecond";
+        registry.registerBeanDefinition(firstBeanName, mockBeanDefinitionFirst);
+        registry.registerBeanDefinition(secondBeanName, mockBeanDefinitionSecond);
+
+        Map<String, BeanDefinition> registeredBeanDefinitions = registry.getRegisteredBeanDefinitions();
+
+        assertNotNull(registeredBeanDefinitions.get(firstBeanName));
+        assertNotNull(registeredBeanDefinitions.get(secondBeanName));
     }
 
 }

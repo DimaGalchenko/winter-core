@@ -28,6 +28,11 @@ public class WinterComponent {
         this.qualifierComponent = qualifierComponent;
     }
 
+    @Autowired
+    public void setAutowiredComponent(AutowiredComponent autowiredComponent) {
+        this.autowiredComponent = autowiredComponent;
+    }
+
     @PostConstruct
     public void init() {
     }
