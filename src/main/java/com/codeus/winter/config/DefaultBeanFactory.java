@@ -1,6 +1,5 @@
 package com.codeus.winter.config;
 
-import com.codeus.winter.config.impl.BeanDefinitionImpl;
 import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
 import com.codeus.winter.exception.BeanNotFoundException;
