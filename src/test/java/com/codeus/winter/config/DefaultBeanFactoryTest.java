@@ -721,14 +721,10 @@ class DefaultBeanFactoryTest {
         beanDefinitionHashMap.put("BeanWithQualifier", beanDefinitionWithQualifierAnnotation);
 
         DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionHashMap);
-        factory.initializeBeans();
 
-        assertNotNull(factory.getBean(BeanWithQualifierAnnotation.class));
-        BeanWithQualifierAnnotation bwqa = factory.getBean(
-                "BeanWithQualifier",
-                BeanWithQualifierAnnotation.class
-        );
-        assertNotNull(bwqa.getCommon());
+        BeanWithQualifierAnnotation beanWithQualifierAnnotation = factory.getBean(BeanWithQualifierAnnotation.class);
+        assertNotNull(beanWithQualifierAnnotation);
+        assertNotNull(beanWithQualifierAnnotation.getCommon());
     }
 
     static BeanDefinition singletonBeanDefinitionMock(Class<?> beanClass) {

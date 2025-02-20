@@ -1,6 +1,8 @@
 package com.codeus.winter.config;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Objects;
@@ -32,6 +34,24 @@ public class DependencyDescriptor {
 
     public DependencyDescriptor(Type dependencyType) {
         this(null, dependencyType);
+    }
+
+    public static DependencyDescriptor from(Parameter parameter) {
+        return new DependencyDescriptor(
+                parameter.getName(),
+                parameter.getType(),
+                parameter.getClass(),
+                parameter.getAnnotations()
+        );
+    }
+
+    public static DependencyDescriptor from(Field field) {
+        return new DependencyDescriptor(
+                field.getName(),
+                field.getType(),
+                field.getClass(),
+                field.getAnnotations()
+        );
     }
 
     protected static Class<?> getRawType(Type dependencyType) {

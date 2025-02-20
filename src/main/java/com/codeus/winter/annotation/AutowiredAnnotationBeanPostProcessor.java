@@ -54,12 +54,7 @@ public class AutowiredAnnotationBeanPostProcessor implements BeanPostProcessor {
         for (Method method : beanType.getDeclaredMethods()) {
             if (method.isAnnotationPresent(Autowired.class)) {
                 for (Parameter parameter : method.getParameters()) {
-                    Object dependency = beanFactory.resolveDependency(new DependencyDescriptor(
-                            parameter.getName(),
-                            parameter.getType(),
-                            parameter.getClass(),
-                            parameter.getAnnotations()
-                    ));
+                    Object dependency = beanFactory.resolveDependency(DependencyDescriptor.from(parameter));
                     method.setAccessible(true);
                     method.invoke(bean, dependency);
                 }
@@ -71,12 +66,7 @@ public class AutowiredAnnotationBeanPostProcessor implements BeanPostProcessor {
         Class<?> beanType = bean.getClass();
         for (Field field : beanType.getDeclaredFields()) {
             if (field.isAnnotationPresent(Autowired.class)) {
-                Object dependency = beanFactory.resolveDependency(new DependencyDescriptor(
-                        field.getName(),
-                        field.getType(),
-                        field.getClass(),
-                        field.getAnnotations()
-                ));
+                Object dependency = beanFactory.resolveDependency(DependencyDescriptor.from(field));
                 field.setAccessible(true);
                 field.set(bean, dependency);
             }

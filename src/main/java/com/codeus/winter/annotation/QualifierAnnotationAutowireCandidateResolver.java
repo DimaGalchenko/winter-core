@@ -14,22 +14,9 @@ public class QualifierAnnotationAutowireCandidateResolver {
     /**
      * Create a new {@code QualifierAnnotationAutowireCandidateResolver} for Winter's
      * standard {@link com.codeus.winter.annotation.Qualifier} annotation.
-     * <p>Also supports JSR-330's {@link jakarta.inject.Qualifier} annotation (as well as
-     * its pre-Jakarta {@code javax.inject.Qualifier} equivalent), if available.
      */
-    @SuppressWarnings("unchecked")
     public QualifierAnnotationAutowireCandidateResolver() {
         this.qualifierTypes.add(Qualifier.class);
-        try {
-            this.qualifierTypes.add((Class<? extends Annotation>) Class.forName("jakarta.inject.Qualifier"));
-        } catch (ClassNotFoundException ex) {
-            // JSR-330 API (as included in Jakarta EE) not available - simply skip.
-        }
-        try {
-            this.qualifierTypes.add((Class<? extends Annotation>) Class.forName("javax.inject.Qualifier"));
-        } catch (ClassNotFoundException ex) {
-            // JSR-330 API not available - simply skip.
-        }
     }
 
     public String getSuggestedName(DependencyDescriptor descriptor) {
