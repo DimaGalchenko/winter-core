@@ -9,7 +9,6 @@ import com.codeus.winter.config.PackageBeanRegistration;
 import com.codeus.winter.config.impl.BeanDefinitionRegistryImpl;
 import com.codeus.winter.exception.BeanNotFoundException;
 import jakarta.annotation.Nullable;
-import java.lang.reflect.InvocationTargetException;
 import org.apache.commons.lang3.ObjectUtils;
 
 /**
