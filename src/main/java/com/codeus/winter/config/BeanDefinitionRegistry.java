@@ -1,6 +1,8 @@
 package com.codeus.winter.config;
 
 
+import java.util.Map;
+
 /**
  * Interface for registries that hold bean definitions, for example RootBeanDefinition
  * and ChildBeanDefinition instances. Typically implemented by BeanFactories that
@@ -53,4 +55,12 @@ public interface BeanDefinitionRegistry {
      * @return the number of beans defined in the registry
      */
     int getBeanDefinitionCount();
+
+
+    /**
+     * Return map of registered bean definitions by bean name.
+     *
+     * @return map of registered bean definitions by bean name
+     */
+    Map<String, BeanDefinition> getRegisteredBeanDefinitions();
 }

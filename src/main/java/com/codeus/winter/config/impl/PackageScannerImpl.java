@@ -1,13 +1,10 @@
 package com.codeus.winter.config.impl;
 
 import com.codeus.winter.config.PackageScanner;
-import org.reflections.Reflections;
-import org.reflections.scanners.Scanners;
-import org.reflections.util.ConfigurationBuilder;
-
 import java.lang.annotation.Annotation;
 import java.util.HashSet;
 import java.util.Set;
+import org.reflections.Reflections;
 
 public class PackageScannerImpl implements PackageScanner {
 
@@ -16,12 +13,7 @@ public class PackageScannerImpl implements PackageScanner {
                                                           Set<Class<? extends Annotation>> annotations) {
         Set<Class<?>> annotatedClasses = new HashSet<>();
 
-        Reflections reflections = new Reflections(
-                new ConfigurationBuilder()
-                        .forPackage(packageName)
-                        .addScanners(Scanners.TypesAnnotated)
-                        .addScanners(Scanners.SubTypes)
-        );
+        Reflections reflections = new Reflections(packageName);
 
         for (Class<? extends Annotation> annotation : annotations) {
             annotatedClasses.addAll(reflections.getTypesAnnotatedWith(annotation));

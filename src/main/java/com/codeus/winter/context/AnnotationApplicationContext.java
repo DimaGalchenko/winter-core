@@ -4,8 +4,8 @@ import com.codeus.winter.config.BeanDefinition;
 import com.codeus.winter.config.BeanDefinitionRegistry;
 import com.codeus.winter.config.BeanFactory;
 import com.codeus.winter.config.BeanPostProcessor;
-import com.codeus.winter.config.ClassPathBeanDefinitionScanner;
 import com.codeus.winter.config.DefaultBeanFactory;
+import com.codeus.winter.config.PackageBeanRegistration;
 import com.codeus.winter.config.impl.BeanDefinitionRegistryImpl;
 import com.codeus.winter.exception.BeanNotFoundException;
 import jakarta.annotation.Nullable;
@@ -13,7 +13,7 @@ import org.apache.commons.lang3.ObjectUtils;
 
 /**
  * Standalone application context, accepting component classes as input.
- * <p>
+ *
  * This includes @Configuration-annotated classes, plain @Component types,
  * and JSR-330 compliant classes using jakarta.inject annotations.
  * Allows registering classes one by one using {@code register(Class...)}
@@ -22,7 +22,7 @@ import org.apache.commons.lang3.ObjectUtils;
 public class AnnotationApplicationContext implements ApplicationContext, BeanFactory {
     private final String id = ObjectUtils.identityToString(this);
     private String displayName = ObjectUtils.identityToString(this);
-    private final ClassPathBeanDefinitionScanner scanner;
+    private final PackageBeanRegistration packageBeanRegistration;
     private final DefaultBeanFactory beanFactory;
     private final BeanDefinitionRegistry beanDefinitionRegistry;
 
@@ -33,9 +33,9 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
      */
     public AnnotationApplicationContext(String... basePackages) {
         this.beanDefinitionRegistry = new BeanDefinitionRegistryImpl();
-        this.scanner = new ClassPathBeanDefinitionScanner(beanDefinitionRegistry);
-        scanner.scanPackages(basePackages);
-        this.beanFactory = new DefaultBeanFactory();
+        this.packageBeanRegistration = new PackageBeanRegistration(beanDefinitionRegistry);
+        packageBeanRegistration.registerBeans(basePackages);
+        this.beanFactory = new DefaultBeanFactory(beanDefinitionRegistry.getRegisteredBeanDefinitions());
     }
 
     @Override
