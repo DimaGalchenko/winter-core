@@ -35,18 +35,18 @@ class PackageBeanRegistrationTest {
 
     @Test
     void shouldRegisterBeansSuccessfully() {
-        beanRegistration.registerBeans("com.codeus.winter.config.test");
+        beanRegistration.registerBeans("com.codeus.winter.config.test.inner");
 
         BeanDefinition definition = registry.getBeanDefinition("winterComponent");
         assertNotNull(definition);
         // bean name
-        assertEquals("com.codeus.winter.config.test.WinterComponent", definition.getBeanClassName());
+        assertEquals("com.codeus.winter.config.test.inner.WinterComponent", definition.getBeanClassName());
         // scope
         assertEquals(SCOPE_PROTOTYPE, definition.getScope());
         assertFalse(definition.isSingleton());
         // depends on
-        String[] dependencies = {"com.codeus.winter.config.test.AutowiredComponent",
-            "com.codeus.winter.config.test.QualifierComponent"
+        String[] dependencies = {"com.codeus.winter.config.test.inner.AutowiredComponent",
+            "com.codeus.winter.config.test.inner.QualifierComponent"
         };
         assertArrayEquals(dependencies, definition.getDependsOn());
         // init method name
@@ -57,16 +57,16 @@ class PackageBeanRegistrationTest {
 
     @Test
     void shouldThrowExceptionForDuplicateBeanNamePassedSamePackageTwoTimes() {
-        beanRegistration.registerBeans("com.codeus.winter.config.test");
+        beanRegistration.registerBeans("com.codeus.winter.config.test.inner");
         assertThrows(NotUniqueBeanDefinitionException.class, () ->
-            beanRegistration.registerBeans("com.codeus.winter.config.test")
+            beanRegistration.registerBeans("com.codeus.winter.config.test.inner")
         );
     }
 
     @Test
     void shouldThrowExceptionForDuplicateBeanNameFoundSameClassInDifferentPackages() {
         assertThrows(NotUniqueBeanDefinitionException.class, () ->
-            beanRegistration.registerBeans("com.codeus.winter.config")
+            beanRegistration.registerBeans("com.codeus.winter")
         );
     }
 

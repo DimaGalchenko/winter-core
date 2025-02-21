@@ -1,4 +1,4 @@
-package com.codeus.winter.config.test;
+package com.codeus.winter.config.test.inner;
 
 import com.codeus.winter.annotation.Autowired;
 import com.codeus.winter.annotation.Component;

@@ -48,27 +48,21 @@ public class PackageBeanRegistration {
     public void registerBeans(String... basePackages) {
         notEmpty(basePackages);
         Set<Class<?>> componentClasses = Arrays.stream(basePackages)
-            .map(basePackage -> packageScanner.findClassesWithAnnotations(basePackage,
-                Set.of(Component.class)))
+            .map(basePackage -> packageScanner.findClassesWithAnnotations(basePackage, Set.of(Component.class)))
             .flatMap(Set::stream)
             .collect(Collectors.toSet());
 
-        if (!componentClasses.isEmpty()) {
-            for (Class<?> clazz : componentClasses) {
-                String beanName = getBeanName(clazz);
+        for (Class<?> clazz : componentClasses) {
+            String beanName = getBeanName(clazz);
 
-                BeanDefinitionImpl beanDefinition = new BeanDefinitionImpl();
-                processCommonDefinitionAnnotations(clazz, beanDefinition);
+            BeanDefinitionImpl beanDefinition = new BeanDefinitionImpl();
+            processCommonDefinitionAnnotations(clazz, beanDefinition);
 
-                if (!registry.containsBeanDefinition(beanName)) {
+            if (!registry.containsBeanDefinition(beanName)) {
                     registry.registerBeanDefinition(beanName, beanDefinition);
-                } else {
-                    throw new NotUniqueBeanDefinitionException(
-                        String.format(
-                            "A bean with the name '%s' is already defined in the registry.",
-                            beanName)
-                    );
-                }
+            } else {
+                throw new NotUniqueBeanDefinitionException(
+                    String.format("A bean with the name '%s' is already defined in the registry.", beanName));
             }
         }
     }
@@ -89,8 +83,7 @@ public class PackageBeanRegistration {
 
         if (clazz.isAnnotationPresent(Scope.class)) {
             String value = clazz.getAnnotation(Scope.class).value().toLowerCase();
-            String scope = value.equals("prototype") ? BeanDefinition.SCOPE_PROTOTYPE
-                : BeanDefinition.SCOPE_SINGLETON;
+            String scope = value.equals("prototype") ? BeanDefinition.SCOPE_PROTOTYPE : BeanDefinition.SCOPE_SINGLETON;
             beanDefinition.setScope(scope);
         }
 
