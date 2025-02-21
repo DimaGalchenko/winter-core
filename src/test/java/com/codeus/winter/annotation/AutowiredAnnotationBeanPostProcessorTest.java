@@ -1,69 +1,49 @@
 package com.codeus.winter.annotation;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import com.codeus.winter.config.DefaultBeanFactory;
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.Set;
+import com.codeus.winter.config.BeanFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.reflections.Reflections;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class AutowiredAnnotationBeanPostProcessorTest {
 
-    private static final String AUTOWIRED_FIELD_BEAN_NAME = "AutowiredFieldTestClass";
-    private static final String AUTOWIRED_METHOD_BEAN_NAME = "AutowiredMethodTestClass";
-    private DefaultBeanFactory beanFactory;
     private AutowiredAnnotationBeanPostProcessor postProcessor;
 
     @BeforeEach
     void setUpBeforeClass() {
-        beanFactory = new DefaultBeanFactory(new HashMap<>());
+        BeanFactory mockBeanFactory = mock(BeanFactory.class);
+        when(mockBeanFactory.getBean(BeanComponent.class)).thenReturn(new BeanComponent());
+
         postProcessor = new AutowiredAnnotationBeanPostProcessor();
-        postProcessor.setBeanFactory(beanFactory);
-        createBeanTestClass();
+        postProcessor.setBeanFactory(mockBeanFactory);
     }
 
     @Test
     void injectField() {
-        // given
-        var bean = beanFactory.getBean(AutowiredFieldTestClass.class);
+        BeanWithAutowiredField bean = new BeanWithAutowiredField();
+        assertNull(bean.getDependency(), "BeanWithAutowiredField's `dependency` should be `null` after instantiation");
 
-        // when
-        Object actual = postProcessor.postProcessBeforeInitialization(bean,
-            AUTOWIRED_FIELD_BEAN_NAME);
+        Object postProcessedBean = postProcessor.postProcessBeforeInitialization(bean, "BeanWithAutowiredField");
 
-        // then
-        Field dependency = actual.getClass().getDeclaredFields()[0];
-        dependency.setAccessible(true);
-        assertEquals(DependencyTestClass.class, dependency.getType());
+        assertNotNull(postProcessedBean);
+        assertEquals(BeanWithAutowiredField.class, postProcessedBean.getClass());
+        assertNotNull(((BeanWithAutowiredField) postProcessedBean).getDependency());
     }
 
     @Test
     void injectMethod() {
-        // given
-        var bean = beanFactory.getBean(AutowiredMethodTestClass.class);
+        BeanWithAutowiredMethod bean = new BeanWithAutowiredMethod();
+        assertNull(bean.getDependency(), "BeanWithAutowiredMethod's `dependency` should be `null` after instantiation");
 
-        // when
-        Object actual = postProcessor.postProcessBeforeInitialization(bean,
-            AUTOWIRED_METHOD_BEAN_NAME);
+        Object postProcessedBean = postProcessor.postProcessBeforeInitialization(bean, "BeanWithAutowiredMethod");
 
-        // then
-        Field dependency = actual.getClass().getDeclaredFields()[0];
-        dependency.setAccessible(true);
-        assertEquals(DependencyTestClass.class, dependency.getType());
-    }
-
-    private void createBeanTestClass() {
-        Reflections refelections = new Reflections("com.codeus.winter.annotation");
-        Set<Class<?>> classes = refelections.getTypesAnnotatedWith(Component.class);
-        classes.forEach(clazz -> {
-            try {
-                beanFactory.createBean(clazz);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
+        assertNotNull(postProcessedBean);
+        assertEquals(BeanWithAutowiredMethod.class, postProcessedBean.getClass());
+        assertNotNull(((BeanWithAutowiredMethod) postProcessedBean).getDependency());
     }
 }

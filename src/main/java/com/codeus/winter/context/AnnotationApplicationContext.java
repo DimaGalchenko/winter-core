@@ -94,9 +94,7 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
     }
 
     @Override
-    public final <T> T createBean(Class<T> beanClass)
-            throws BeanNotFoundException, NoSuchMethodException, InvocationTargetException,
-            InstantiationException, IllegalAccessException {
+    public final <T> T createBean(Class<T> beanClass) throws BeanNotFoundException {
         return beanFactory.createBean(beanClass);
     }
 

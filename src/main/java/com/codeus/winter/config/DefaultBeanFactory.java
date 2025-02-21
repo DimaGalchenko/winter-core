@@ -1,6 +1,5 @@
 package com.codeus.winter.config;
 
-import com.codeus.winter.config.impl.BeanDefinitionImpl;
 import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
 import com.codeus.winter.exception.BeanNotFoundException;
@@ -116,26 +115,16 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
     }
 
     /**
-     * Creates bean object with class type.
+     * Creates a prototype-scoped bean for the specified bean class.
      *
      * @param beanClass specified bean class.
      * @return bean object if its not possible throw exception.
      */
     @Override
-    //TODO (other ticket scope): this should be adjusted to create beans with PROTOTYPE scope
-    public final <T> T createBean(@Nonnull final Class<T> beanClass)
-            throws NotUniqueBeanDefinitionException, InvocationTargetException, InstantiationException,
-            IllegalAccessException, NoSuchMethodException {
-        checkBeanClassUniqueness(beanClass);
+    public final <T> T createBean(@Nonnull final Class<T> beanClass) {
+        BeanDefinition beanDefinition = BeanDefinitionFactory.prototypeBeanDefinition(beanClass);
+        Object newBean = createBean(beanClass.getName(), beanDefinition);
 
-        //TODO handle direct BeanDefinitionImpl instantiation, add some factory method
-        BeanDefinitionImpl beanDefinition = new BeanDefinitionImpl();
-        beanDefinition.setBeanClassName(beanClass.getName());
-        beanDefinition.setScope(BeanDefinition.SCOPE_SINGLETON);
-
-        Object newBean = beanClass.getDeclaredConstructor().newInstance();
-        singletonBeans.put(newBean.getClass().getName(), newBean);
-        beanDefinitions.put(newBean.getClass().getName(), beanDefinition);
         return beanClass.cast(newBean);
     }
 
@@ -164,13 +153,6 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
     @Override
     public final void addBeanPostProcessor(@Nonnull final BeanPostProcessor postProcessor) {
         postProcessors.add(postProcessor);
-    }
-
-    private <T> void checkBeanClassUniqueness(@Nonnull final Class<T> beanClass) {
-        if (singletonBeans.values().stream().anyMatch(beanClass::isInstance)) {
-            throw new NotUniqueBeanDefinitionException(
-                    String.format("Bean with type '%s' already exists", beanClass.getName()));
-        }
     }
 
     /**
@@ -204,15 +186,17 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
      * @param beanName       a name of a bean to retrieve.
      * @param beanDefinition a definition of a bean to retrieve.
      * @return a bean instance.
-     * @throws IllegalArgumentException if given beanDefinition has {@link Scope#PROTOTYPE} scope.
+     * @throws IllegalArgumentException if given beanDefinition has unsupported scope.
      */
     private Object getBean(String beanName, BeanDefinition beanDefinition) {
         if (beanDefinition.isSingleton()) {
             return getSingleton(beanName, beanDefinition);
+        } else if (beanDefinition.isPrototype()) {
+            return createBean(beanName, beanDefinition);
         } else {
-            // place for PROTOTYPE scope logic
             throw new IllegalArgumentException(
-                    "DefaultBeanFactory cannot create bean (name='%s') with the PROTOTYPE scope.".formatted(beanName));
+                    "DefaultBeanFactory cannot create the bean (name='%s') with the scope='%s'."
+                            .formatted(beanName, beanDefinition.getScope()));
         }
     }
 
@@ -323,6 +307,7 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
      * @param descriptor a dependency descriptor to resolve a bean.
      * @return bean instance that conform the given {@link DependencyDescriptor}.
      */
+    @SuppressWarnings("IfCanBeSwitch")
     @Override
     protected Object resolveDependency(DependencyDescriptor descriptor) {
         Object dependency;
