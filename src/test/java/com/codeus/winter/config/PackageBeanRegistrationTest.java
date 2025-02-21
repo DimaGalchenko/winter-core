@@ -66,7 +66,7 @@ class PackageBeanRegistrationTest {
     @Test
     void shouldThrowExceptionForDuplicateBeanNameFoundSameClassInDifferentPackages() {
         assertThrows(NotUniqueBeanDefinitionException.class, () ->
-            beanRegistration.registerBeans("com.codeus.winter")
+            beanRegistration.registerBeans("com.codeus.winter.config.test")
         );
     }
 
