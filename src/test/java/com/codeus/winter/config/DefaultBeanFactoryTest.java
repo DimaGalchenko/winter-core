@@ -714,15 +714,14 @@ class DefaultBeanFactoryTest {
         BeanDefinition beanDefinitionWithQualifierAnnotation = singletonBeanDefinitionMock(
                 BeanWithQualifierAnnotation.class
         );
-        beanDefinitionWithQualifierAnnotation.setBeanClassName("com.codeus.winter.test.BeanWithQualifierAnnotation");
         HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
         beanDefinitionHashMap.put("BeanA", beanDefinitionA);
         beanDefinitionHashMap.put("BeanE", beanDefinitionE);
         beanDefinitionHashMap.put("BeanWithQualifier", beanDefinitionWithQualifierAnnotation);
-
         DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionHashMap);
 
         BeanWithQualifierAnnotation beanWithQualifierAnnotation = factory.getBean(BeanWithQualifierAnnotation.class);
+
         assertNotNull(beanWithQualifierAnnotation);
         assertNotNull(beanWithQualifierAnnotation.getCommon());
     }

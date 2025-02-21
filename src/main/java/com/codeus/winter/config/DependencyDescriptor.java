@@ -39,8 +39,8 @@ public class DependencyDescriptor {
     public static DependencyDescriptor from(Parameter parameter) {
         return new DependencyDescriptor(
                 parameter.getName(),
+                parameter.getParameterizedType(),
                 parameter.getType(),
-                parameter.getClass(),
                 parameter.getAnnotations()
         );
     }
@@ -48,8 +48,8 @@ public class DependencyDescriptor {
     public static DependencyDescriptor from(Field field) {
         return new DependencyDescriptor(
                 field.getName(),
+                field.getGenericType(),
                 field.getType(),
-                field.getClass(),
                 field.getAnnotations()
         );
     }
