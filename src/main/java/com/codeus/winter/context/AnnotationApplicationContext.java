@@ -4,14 +4,12 @@ import com.codeus.winter.config.BeanDefinition;
 import com.codeus.winter.config.BeanDefinitionRegistry;
 import com.codeus.winter.config.BeanFactory;
 import com.codeus.winter.config.BeanPostProcessor;
-import com.codeus.winter.config.ClassPathBeanDefinitionScanner;
 import com.codeus.winter.config.DefaultBeanFactory;
+import com.codeus.winter.config.PackageBeanRegistration;
 import com.codeus.winter.config.impl.BeanDefinitionRegistryImpl;
 import com.codeus.winter.exception.BeanNotFoundException;
 import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.ObjectUtils;
-
-import java.lang.reflect.InvocationTargetException;
 
 /**
  * Standalone application context, accepting component classes as input.
@@ -24,7 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 public class AnnotationApplicationContext implements ApplicationContext, BeanFactory {
     private final String id = ObjectUtils.identityToString(this);
     private String displayName = ObjectUtils.identityToString(this);
-    private final ClassPathBeanDefinitionScanner scanner;
+    private final PackageBeanRegistration packageBeanRegistration;
     private final DefaultBeanFactory beanFactory;
     private final BeanDefinitionRegistry beanDefinitionRegistry;
 
@@ -35,9 +33,9 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
      */
     public AnnotationApplicationContext(String... basePackages) {
         this.beanDefinitionRegistry = new BeanDefinitionRegistryImpl();
-        this.scanner = new ClassPathBeanDefinitionScanner(beanDefinitionRegistry);
-        scanner.scanPackages(basePackages);
-        this.beanFactory = new DefaultBeanFactory();
+        this.packageBeanRegistration = new PackageBeanRegistration(beanDefinitionRegistry);
+        packageBeanRegistration.registerBeans(basePackages);
+        this.beanFactory = new DefaultBeanFactory(beanDefinitionRegistry.getRegisteredBeanDefinitions());
     }
 
     @Override
@@ -95,9 +93,7 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
     }
 
     @Override
-    public final <T> T createBean(Class<T> beanClass)
-            throws BeanNotFoundException, NoSuchMethodException, InvocationTargetException,
-            InstantiationException, IllegalAccessException {
+    public final <T> T createBean(Class<T> beanClass) throws BeanNotFoundException {
         return beanFactory.createBean(beanClass);
     }
 

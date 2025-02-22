@@ -1,9 +1,6 @@
 package com.codeus.winter.config;
 
 import com.codeus.winter.exception.BeanNotFoundException;
-import jakarta.annotation.Nullable;
-
-import java.lang.reflect.InvocationTargetException;
 
 public interface BeanFactory {
 
@@ -17,48 +14,47 @@ public interface BeanFactory {
     void registerBeanDefinition(String name, BeanDefinition beanDefinition);
 
     /**
-     * Return the unique bean object of this application context for specified name.
+     * Returns the singleton bean object of this application context for specified name.
      *
      * @param name bean's name.
-     * @return the unique bean object of this context, or null if none.
+     * @return the singleton bean object of this context.
+     * @throws BeanNotFoundException if bean not found for specified name.
      */
-    @Nullable
     Object getBean(String name) throws BeanNotFoundException;
 
     /**
-     * Return the unique bean object of this application context for specified name
+     * Returns the singleton bean object of this application context for specified name
      * and cast it to the specified class type.
      *
      * @param name         bean name
      * @param requiredType required class type
      * @param <T>          the type of the bean
-     * @return the unique bean object of this context, or null if none
+     * @return the singleton bean object of this context.
+      @throws BeanNotFoundException if bean not found for specified name and type.
      */
-    @Nullable
     <T> T getBean(String name, Class<T> requiredType) throws BeanNotFoundException;
 
     /**
-     * Return the unique bean object of this application context for the specified class type.
+     * Returns the singleton bean object of this application context for the specified class type.
      *
      * @param requiredType required class type
      * @param <T>          the type of the bean
-     * @return the unique bean object of this context, or null if none
+     * @return the singleton bean object of this context.
+      @throws BeanNotFoundException if bean not found for specified type.
      */
-    @Nullable
     <T> T getBean(Class<T> requiredType) throws BeanNotFoundException;
 
     /**
-     * Create a bean for the specified bean class.
+     * Creates a prototype-scoped bean for the specified bean class.
      *
      * @param beanClass specified bean class.
      * @param <T>       the type of the bean
      * @return the bean for the specified bean class.
      */
-    <T> T createBean(Class<T> beanClass) throws BeanNotFoundException, NoSuchMethodException,
-            InvocationTargetException, InstantiationException, IllegalAccessException;
+    <T> T createBean(Class<T> beanClass);
 
     /**
-     * Register a bean for its name, BeanDefinition, and instance.
+     * Registers a bean for its name, BeanDefinition, and instance.
      *
      * @param name           bean's name.
      * @param beanDefinition bean's BeanDefinition.
@@ -67,7 +63,7 @@ public interface BeanFactory {
     void registerBean(String name, BeanDefinition beanDefinition, Object beanInstance);
 
     /**
-     * Add a BeanPostProcessor.
+     * Adds a BeanPostProcessor.
      *
      * @param postProcessor BeanPostProcessor
      */

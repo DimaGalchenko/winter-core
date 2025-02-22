@@ -75,6 +75,17 @@ public class BeanDefinitionImpl implements BeanDefinition {
     public boolean isSingleton() {
         return SCOPE_SINGLETON.equals(this.scope);
     }
+
+    /**
+     * Check whether this bean is a prototype.
+     *
+     * @return {@code true} if the bean is a prototype; {@code false} otherwise.
+     */
+    @Override
+    public boolean isPrototype() {
+        return SCOPE_PROTOTYPE.equals(this.scope);
+    }
+
     /**
      * Set the names of the beans that this bean depends on for initialization.
      *
