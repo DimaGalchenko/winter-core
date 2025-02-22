@@ -1,12 +1,13 @@
 package com.codeus.winter.annotation;
 
-import com.codeus.winter.config.BeanFactory;
+import com.codeus.winter.config.AbstractAutowireCapableBeanFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -16,8 +17,8 @@ class AutowiredAnnotationBeanPostProcessorTest {
 
     @BeforeEach
     void setUpBeforeClass() {
-        BeanFactory mockBeanFactory = mock(BeanFactory.class);
-        when(mockBeanFactory.getBean(BeanComponent.class)).thenReturn(new BeanComponent());
+        AbstractAutowireCapableBeanFactory mockBeanFactory = mock(AbstractAutowireCapableBeanFactory.class);
+        when(mockBeanFactory.resolveDependency(any())).thenReturn(new BeanComponent());
 
         postProcessor = new AutowiredAnnotationBeanPostProcessor();
         postProcessor.setBeanFactory(mockBeanFactory);

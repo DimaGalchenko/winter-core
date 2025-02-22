@@ -1,6 +1,5 @@
 package com.codeus.winter.config;
 
-import com.codeus.winter.config.impl.BeanDefinitionImpl;
 import com.codeus.winter.exception.BeanCurrentlyInCreationException;
 import com.codeus.winter.exception.BeanFactoryException;
 import com.codeus.winter.exception.BeanNotFoundException;
@@ -17,6 +16,7 @@ import com.codeus.winter.test.BeanWithMultipleNonAnnotatedAndDefaultConstructors
 import com.codeus.winter.test.BeanWithNonAnnotatedAndDefaultConstructors;
 import com.codeus.winter.test.BeanWithNonAnnotatedConstructors;
 import com.codeus.winter.test.BeanWithPrivateConstructor;
+import com.codeus.winter.test.BeanWithQualifierAnnotation;
 import com.codeus.winter.test.BeanWithSelfInjection;
 import com.codeus.winter.test.BeansWithCyclicDependency;
 import com.codeus.winter.test.Common;
@@ -686,7 +686,7 @@ class DefaultBeanFactoryTest {
         Map<String, BeanDefinition> beanDefinitionMap = spy(new HashMap<>());
         BeanFactory beanFactory = new DefaultBeanFactory(beanDefinitionMap);
         String beanDefinitionName = "BeanDefinition";
-        BeanDefinition beanDefinition = new BeanDefinitionImpl();
+        BeanDefinition beanDefinition = singletonBeanDefinitionMock(BeanA.class);
 
         beanFactory.registerBeanDefinition(beanDefinitionName, beanDefinition);
 
@@ -698,7 +698,7 @@ class DefaultBeanFactoryTest {
     void testShouldThrowExceptionWhenRegisterBeanDefinitionWithSameName() {
         BeanFactory beanFactory = new DefaultBeanFactory();
         String beanDefinitionName = "BeanDefinition";
-        BeanDefinition beanDefinition = new BeanDefinitionImpl();
+        BeanDefinition beanDefinition = singletonBeanDefinitionMock(BeanA.class);
 
         beanFactory.registerBeanDefinition(beanDefinitionName, beanDefinition);
         assertThrows(
@@ -706,6 +706,24 @@ class DefaultBeanFactoryTest {
                 () -> beanFactory.registerBeanDefinition(beanDefinitionName, beanDefinition)
         );
 
+    }
+
+    @Test
+    @DisplayName("Should initialize a bean with multiple candidates using @Qualifier annotation")
+    void testShouldInitializeBeanWithMultipleCandidatesUsingQualifier() {
+        BeanDefinition beanDefinitionWithQualifierAnnotation = singletonBeanDefinitionMock(
+                BeanWithQualifierAnnotation.class
+        );
+        HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
+        beanDefinitionHashMap.put("BeanA", beanDefinitionA);
+        beanDefinitionHashMap.put("BeanE", beanDefinitionE);
+        beanDefinitionHashMap.put("BeanWithQualifier", beanDefinitionWithQualifierAnnotation);
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionHashMap);
+
+        BeanWithQualifierAnnotation beanWithQualifierAnnotation = factory.getBean(BeanWithQualifierAnnotation.class);
+
+        assertNotNull(beanWithQualifierAnnotation);
+        assertNotNull(beanWithQualifierAnnotation.getCommon());
     }
 
     static BeanDefinition singletonBeanDefinitionMock(Class<?> beanClass) {

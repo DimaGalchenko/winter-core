@@ -28,7 +28,7 @@ public abstract class AbstractAutowireCapableBeanFactory implements BeanFactory 
      * @param descriptor a dependency descriptor to resolve a bean.
      * @return bean instance that conform the given {@link DependencyDescriptor}.
      */
-    protected abstract Object resolveDependency(DependencyDescriptor descriptor);
+    public abstract Object resolveDependency(DependencyDescriptor descriptor);
 
     /**
      * Delegates constructor autowiring to the {@link ConstructorResolver}.
