@@ -10,7 +10,6 @@ import java.lang.annotation.Target;
  * to autowire a single-valued dependency. If exactly one 'primary' bean exists among
  * the candidates, it will be the autowired value.
  */
-@Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.METHOD})
 public @interface Primary {
