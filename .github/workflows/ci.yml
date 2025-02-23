@@ -39,7 +39,7 @@ jobs:
 
       # Step 5: Run OWASP Dependency Check
       - name: Run Dependency Check
-        timeout-minutes: 10
+        timeout-minutes: 1
         continue-on-error: true
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}

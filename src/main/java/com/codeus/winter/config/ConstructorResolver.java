@@ -5,7 +5,6 @@ import com.codeus.winter.exception.BeanFactoryException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
-import java.lang.reflect.Type;
 
 public class ConstructorResolver {
 
@@ -43,17 +42,10 @@ public class ConstructorResolver {
      */
     Object[] makeArgumentArray(Constructor<?> constructor) {
         Parameter[] parameters = constructor.getParameters();
-        Type[] parameterTypes = constructor.getGenericParameterTypes();
         Object[] resolvedDependencies = new Object[parameters.length];
 
         for (int i = 0; i < parameters.length; i++) {
-            Parameter parameter = parameters[i];
-            String dependencyName = parameter.getName();
-            Class<?> dependencyClass = parameter.getType();
-            Type dependencyType = parameterTypes[i];
-            DependencyDescriptor descriptor = new DependencyDescriptor(dependencyName, dependencyType, dependencyClass);
-
-            resolvedDependencies[i] = beanFactory.resolveDependency(descriptor);
+            resolvedDependencies[i] = beanFactory.resolveDependency(DependencyDescriptor.from(parameters[i]));
         }
         return resolvedDependencies;
     }
