@@ -14,9 +14,7 @@ Winter is an Inversion of Control (IoC) framework for Java, inspired by Spring. 
 - **@Qualifier**: Allows specifying which bean to inject when multiple implementations exist.
 
   - **Qualifier Modes:**
-      - **@Qualifier("beanName")** (by declared name)
-      - **@Qualifier("customAnnotationValue")** (annotation value-based)
-      - *(Future Release?)* Custom qualifier annotations
+      - **@Qualifier("beanName")** (by bean name)
 
 ### 2. Bean Management
 - **@Component**: Marks a class as a managed bean.
