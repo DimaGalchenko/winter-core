@@ -13,7 +13,7 @@ import com.codeus.winter.test.BeanWithAnnotatedConstructor;
 import com.codeus.winter.test.BeanWithDependencyByInterface;
 import com.codeus.winter.test.BeanWithMultipleAutowiringConstructors;
 import com.codeus.winter.test.BeanWithMultipleNonAnnotatedAndDefaultConstructors;
-import com.codeus.winter.test.BeanWithMultiplyInjectionCandidates;
+import com.codeus.winter.test.BeanWithMultipleInjectionCandidates;
 import com.codeus.winter.test.BeanWithNonAnnotatedAndDefaultConstructors;
 import com.codeus.winter.test.BeanWithNonAnnotatedConstructors;
 import com.codeus.winter.test.BeanWithPrivateConstructor;
@@ -21,7 +21,7 @@ import com.codeus.winter.test.BeanWithQualifierAnnotation;
 import com.codeus.winter.test.BeanWithSelfInjection;
 import com.codeus.winter.test.BeansWithCyclicDependency;
 import com.codeus.winter.test.Common;
-import com.codeus.winter.test.PrimaryBean;
+import com.codeus.winter.test.BeanWithPrimaryAnnotation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -732,23 +732,47 @@ class DefaultBeanFactoryTest {
     @DisplayName("Should initialize a bean with multiple candidates using @Primary annotation")
     void testShouldInitializeBeanWithMultipleCandidatesUsingPrimary() {
         BeanDefinition beanDefinitionWithMultiplyInjectionCandidates = singletonBeanDefinitionMock(
-                BeanWithMultiplyInjectionCandidates.class
+                BeanWithMultipleInjectionCandidates.class
         );
         BeanDefinition primaryBean = singletonBeanDefinitionMock(
-                PrimaryBean.class
+                BeanWithPrimaryAnnotation.class
         );
         when(primaryBean.isPrimary()).thenReturn(true);
         HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
         beanDefinitionHashMap.put("BeanA", beanDefinitionA);
         beanDefinitionHashMap.put("PrimaryBean", primaryBean);
-        beanDefinitionHashMap.put("BeanWithQualifier", beanDefinitionWithMultiplyInjectionCandidates);
+        beanDefinitionHashMap.put("BeanWithCandidates", beanDefinitionWithMultiplyInjectionCandidates);
         DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionHashMap);
 
-        BeanWithMultiplyInjectionCandidates beanWithMultiplyInjectionCandidates
-                = factory.getBean(BeanWithMultiplyInjectionCandidates.class);
+        BeanWithMultipleInjectionCandidates beanWithMultipleInjectionCandidates
+                = factory.getBean(BeanWithMultipleInjectionCandidates.class);
 
-        assertNotNull(beanWithMultiplyInjectionCandidates);
-        assertNotNull(beanWithMultiplyInjectionCandidates.getCommon());
+        assertNotNull(beanWithMultipleInjectionCandidates);
+        assertNotNull(beanWithMultipleInjectionCandidates.getCommon());
+        assertEquals(BeanWithPrimaryAnnotation.class, beanWithMultipleInjectionCandidates.getCommon().getClass());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when find multiple primary candidates")
+    void testShouldThrowExceptionWhenFindMultiplePrimaryCandidates() {
+        BeanDefinition beanDefinitionWithMultiplyInjectionCandidates = singletonBeanDefinitionMock(
+                BeanWithMultipleInjectionCandidates.class
+        );
+        BeanDefinition primaryBean = singletonBeanDefinitionMock(
+                BeanWithPrimaryAnnotation.class
+        );
+        when(primaryBean.isPrimary()).thenReturn(true);
+        when(beanDefinitionA.isPrimary()).thenReturn(true);
+        HashMap<String, BeanDefinition> beanDefinitionHashMap = new HashMap<>();
+        beanDefinitionHashMap.put("AnotherPrimaryBean", beanDefinitionA);
+        beanDefinitionHashMap.put("PrimaryBean", primaryBean);
+        beanDefinitionHashMap.put("BeanWithCandidates", beanDefinitionWithMultiplyInjectionCandidates);
+        DefaultBeanFactory factory = new DefaultBeanFactory(beanDefinitionHashMap);
+
+        assertThrows(
+                NotUniqueBeanDefinitionException.class,
+                () -> factory.getBean(BeanWithMultipleInjectionCandidates.class)
+        );
     }
 
     static BeanDefinition singletonBeanDefinitionMock(Class<?> beanClass) {

@@ -2,11 +2,11 @@ package com.codeus.winter.test;
 
 import com.codeus.winter.annotation.Autowired;
 
-public class BeanWithMultiplyInjectionCandidates {
+public class BeanWithMultipleInjectionCandidates {
     private final Common common;
 
     @Autowired
-    public BeanWithMultiplyInjectionCandidates(Common common) {
+    public BeanWithMultipleInjectionCandidates(Common common) {
         this.common = common;
     }
 
