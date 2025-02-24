@@ -113,7 +113,7 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
     }
 
     private static final String WINTER_BANNER = """
-    
+    >
            *                  *             *
      *           *      *             *             *
 
