@@ -427,8 +427,10 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
         if (candidates.size() == 1) {
             targetCandidate = candidates.getFirst();
         } else {
-            //TODO #35: there are multiple candidates, add logic to choose one based
-            // on @Primary or other util annotation.
+            targetCandidate = determinePrimaryCandidate(candidates);
+            if (targetCandidate != null) {
+                return getBean(targetCandidate.getKey(), targetCandidate.getValue());
+            }
 
             String suggestedName = qualifierAnnotationAutowireCandidateResolver.getSuggestedName(descriptor);
             if (suggestedName != null) {
@@ -449,6 +451,24 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
         }
 
         return getBean(targetCandidate.getKey(), targetCandidate.getValue());
+    }
+
+    private Map.Entry<String, BeanDefinition> determinePrimaryCandidate(
+            List<Map.Entry<String, BeanDefinition>> candidates
+    ) {
+        Map.Entry<String, BeanDefinition> result = null;
+        int primaryAnnotationCount = 0;
+        for (Map.Entry<String, BeanDefinition> candidate : candidates) {
+            var beanDefinition = candidate.getValue();
+            if (beanDefinition.isPrimary()) {
+                primaryAnnotationCount++;
+                if (primaryAnnotationCount > 1) {
+                    return null;
+                }
+                result = candidate;
+            }
+        }
+        return result;
     }
 
     private Object applyPostProcessorsBeforeInitialization(Object bean, String beanName) {
