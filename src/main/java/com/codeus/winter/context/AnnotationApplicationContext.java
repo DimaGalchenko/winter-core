@@ -10,6 +10,8 @@ import com.codeus.winter.config.impl.BeanDefinitionRegistryImpl;
 import com.codeus.winter.exception.BeanNotFoundException;
 import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Standalone application context, accepting component classes as input.
@@ -20,6 +22,8 @@ import org.apache.commons.lang3.ObjectUtils;
  * as well as classpath scanning using {@code scan(String...)}.
  */
 public class AnnotationApplicationContext implements ApplicationContext, BeanFactory {
+    private static final Logger LOGGER = LogManager.getLogger(AnnotationApplicationContext.class);
+
     private final String id = ObjectUtils.identityToString(this);
     private String displayName = ObjectUtils.identityToString(this);
     private final PackageBeanRegistration packageBeanRegistration;
@@ -32,7 +36,7 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
      * @param basePackages the base packages to scan for component classes
      */
     public AnnotationApplicationContext(String... basePackages) {
-        System.out.println(WINTER_BANNER);
+        LOGGER.info(WINTER_BANNER);
         this.beanDefinitionRegistry = new BeanDefinitionRegistryImpl();
         this.packageBeanRegistration = new PackageBeanRegistration(beanDefinitionRegistry);
         packageBeanRegistration.registerBeans(basePackages);
@@ -109,6 +113,7 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
     }
 
     private static final String WINTER_BANNER = """
+    
            *                  *             *
      *           *      *             *             *
 
