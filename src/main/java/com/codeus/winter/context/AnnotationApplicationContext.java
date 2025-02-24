@@ -32,6 +32,7 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
      * @param basePackages the base packages to scan for component classes
      */
     public AnnotationApplicationContext(String... basePackages) {
+        System.out.println(WINTER_BANNER);
         this.beanDefinitionRegistry = new BeanDefinitionRegistryImpl();
         this.packageBeanRegistration = new PackageBeanRegistration(beanDefinitionRegistry);
         packageBeanRegistration.registerBeans(basePackages);
@@ -106,4 +107,19 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
     public final void addBeanPostProcessor(BeanPostProcessor postProcessor) {
         beanFactory.addBeanPostProcessor(postProcessor);
     }
+
+    private static final String WINTER_BANNER = """
+           *                  *             *
+     *           *      *             *             *
+
+     __          __  _   _   _   _____   _____   _____  *
+     \\ \\        / / | | | \\ | | |_   _| |  ___| |  __ \\
+      \\ \\  /\\  / /  | | |  \\| |   | |   | |_    | |__) |
+       \\ \\/  \\/ /   | | | . ` |   | |   |  _|   |  _  /
+        \\  /\\  /    | | | |\\  |   | |   | |___  | | \\ \\
+         \\/  \\/     |_| |_| \\_|   |_|   |_____| |_|  \\_\\  V: 1.0.0
+
+      *             *              *                 *
+             *            *                 *
+    """;
 }
