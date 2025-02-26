@@ -22,9 +22,9 @@ import org.apache.commons.lang3.ObjectUtils;
  * as well as classpath scanning using {@code scan(String...)}.
  */
 public class AnnotationApplicationContext implements ApplicationContext, BeanFactory {
+    private final long startupMillis = System.currentTimeMillis();
     private final String id = ObjectUtils.identityToString(this);
     private String displayName = ObjectUtils.identityToString(this);
-    private final long startupMillis = System.currentTimeMillis();
 
     private final PackageBeanRegistration packageBeanRegistration;
     private final DefaultBeanFactory beanFactory;

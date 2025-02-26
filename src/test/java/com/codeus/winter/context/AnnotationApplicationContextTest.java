@@ -1,18 +1,16 @@
 package com.codeus.winter.context;
 
-import com.codeus.winter.config.BeanDefinition;
 import com.codeus.winter.context.test.ComplexBean;
 import com.codeus.winter.context.test.SimpleBean;
 import com.codeus.winter.test.BeanA;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static com.codeus.winter.test.MockHelper.singletonBeanDefinitionMock;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class AnnotationApplicationContextTest {
 
@@ -60,10 +58,8 @@ class AnnotationApplicationContextTest {
     @Test
     @DisplayName("should delegate bean registration to the underlying BeanFactory")
     void shouldDelegateBeanRegistrationToUnderlyingBeanFactory() {
-        BeanDefinition beanDefinition = mock(BeanDefinition.class);
-        when(beanDefinition.getBeanClassName()).thenReturn(BeanA.class.getName());
-        when(beanDefinition.isSingleton()).thenReturn(true);
-        BeanA beanInstance = new BeanA();
+        var beanDefinition = singletonBeanDefinitionMock(BeanA.class);
+        var beanInstance = new BeanA();
         var context = new AnnotationApplicationContext("com.codeus.winter.context.test");
 
         context.registerBean("beanA", beanDefinition, beanInstance);
