@@ -1,5 +1,7 @@
 package com.codeus.winter.context;
 
+import com.codeus.winter.annotation.AutowiredAnnotationBeanPostProcessor;
+import com.codeus.winter.annotation.InitDestroyAnnotationBeanPostProcessor;
 import com.codeus.winter.config.BeanDefinition;
 import com.codeus.winter.config.BeanDefinitionRegistry;
 import com.codeus.winter.config.BeanFactory;
@@ -13,7 +15,7 @@ import org.apache.commons.lang3.ObjectUtils;
 
 /**
  * Standalone application context, accepting component classes as input.
- *
+ * <p>
  * This includes @Configuration-annotated classes, plain @Component types,
  * and JSR-330 compliant classes using jakarta.inject annotations.
  * Allows registering classes one by one using {@code register(Class...)}
@@ -22,6 +24,8 @@ import org.apache.commons.lang3.ObjectUtils;
 public class AnnotationApplicationContext implements ApplicationContext, BeanFactory {
     private final String id = ObjectUtils.identityToString(this);
     private String displayName = ObjectUtils.identityToString(this);
+    private final long startupMillis = System.currentTimeMillis();
+
     private final PackageBeanRegistration packageBeanRegistration;
     private final DefaultBeanFactory beanFactory;
     private final BeanDefinitionRegistry beanDefinitionRegistry;
@@ -36,7 +40,9 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
         this.beanDefinitionRegistry = new BeanDefinitionRegistryImpl();
         this.packageBeanRegistration = new PackageBeanRegistration(beanDefinitionRegistry);
         packageBeanRegistration.registerBeans(basePackages);
+
         this.beanFactory = new DefaultBeanFactory(beanDefinitionRegistry.getRegisteredBeanDefinitions());
+        configureSystemBeanPostProcessors(this.beanFactory);
     }
 
     @Override
@@ -67,7 +73,7 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
 
     @Override
     public final long getStartupDate() {
-        return 0;
+        return startupMillis;
     }
 
     @Override
@@ -78,13 +84,13 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
     @Nullable
     @Override
     public final Object getBean(String name) throws BeanNotFoundException {
-        return null;
+        return beanFactory.getBean(name);
     }
 
     @Nullable
     @Override
     public final <T> T getBean(String name, Class<T> requiredType) throws BeanNotFoundException {
-        return null;
+        return beanFactory.getBean(name, requiredType);
     }
 
     @Nullable
@@ -106,6 +112,14 @@ public class AnnotationApplicationContext implements ApplicationContext, BeanFac
     @Override
     public final void addBeanPostProcessor(BeanPostProcessor postProcessor) {
         beanFactory.addBeanPostProcessor(postProcessor);
+    }
+
+    private void configureSystemBeanPostProcessors(DefaultBeanFactory beanFactory) {
+        this.beanFactory.addBeanPostProcessor(new InitDestroyAnnotationBeanPostProcessor());
+
+        AutowiredAnnotationBeanPostProcessor autowiredPostProcessor = new AutowiredAnnotationBeanPostProcessor();
+        autowiredPostProcessor.setBeanFactory(beanFactory);
+        this.beanFactory.addBeanPostProcessor(autowiredPostProcessor);
     }
 
     private static final String WINTER_BANNER = """
