@@ -5,8 +5,10 @@ import com.codeus.winter.config.BeanDefinition;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class MockHelper {
+public final class MockHelper {
 
+    private MockHelper() {
+    }
 
     public static BeanDefinition singletonBeanDefinitionMock(Class<?> beanClass) {
         BeanDefinition beanDefinition = mock(BeanDefinition.class);
