@@ -14,6 +14,7 @@ import com.codeus.winter.annotation.Scope;
 @Primary
 @Component
 @Scope("prototype")
+@SuppressWarnings({"unused", "FieldMayBeFinal", "FieldCanBeLocal"})
 public class WinterComponent {
 
     private AutowiredComponent autowiredComponent;

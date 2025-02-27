@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.codeus.winter.test.MockHelper.prototypeBeanDefinitionMock;
+import static com.codeus.winter.test.MockHelper.singletonBeanDefinitionMock;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -773,22 +775,5 @@ class DefaultBeanFactoryTest {
                 NotUniqueBeanDefinitionException.class,
                 () -> factory.getBean(BeanWithMultipleInjectionCandidates.class)
         );
-    }
-
-    static BeanDefinition singletonBeanDefinitionMock(Class<?> beanClass) {
-        BeanDefinition beanDefinition = mock(BeanDefinition.class);
-        when(beanDefinition.getBeanClassName()).thenReturn(beanClass.getName());
-        when(beanDefinition.isSingleton()).thenReturn(true);
-
-        return beanDefinition;
-    }
-
-    @SuppressWarnings("SameParameterValue")
-    static BeanDefinition prototypeBeanDefinitionMock(Class<?> beanClass) {
-        BeanDefinition beanDefinition = mock(BeanDefinition.class);
-        when(beanDefinition.getBeanClassName()).thenReturn(beanClass.getName());
-        when(beanDefinition.isPrototype()).thenReturn(true);
-
-        return beanDefinition;
     }
 }
