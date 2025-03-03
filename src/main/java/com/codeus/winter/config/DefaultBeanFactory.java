@@ -427,11 +427,6 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
         if (candidates.size() == 1) {
             targetCandidate = candidates.getFirst();
         } else {
-            targetCandidate = determinePrimaryCandidate(candidates);
-            if (targetCandidate != null) {
-                return getBean(targetCandidate.getKey(), targetCandidate.getValue());
-            }
-
             String suggestedName = qualifierAnnotationAutowireCandidateResolver.getSuggestedName(descriptor);
             if (suggestedName != null) {
                 for (Map.Entry<String, BeanDefinition> candidate : candidates) {
@@ -439,6 +434,11 @@ public class DefaultBeanFactory extends AbstractAutowireCapableBeanFactory {
                         return getBean(candidate.getKey(), candidate.getValue());
                     }
                 }
+            }
+
+            targetCandidate = determinePrimaryCandidate(candidates);
+            if (targetCandidate != null) {
+                return getBean(targetCandidate.getKey(), targetCandidate.getValue());
             }
 
             String candidateClasses = candidates.stream()
